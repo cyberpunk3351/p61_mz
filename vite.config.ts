@@ -7,7 +7,7 @@ import { defineConfig, loadEnv } from 'vite';
 export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
     const devOrigin = env.VITE_DEV_ORIGIN || 'http://localhost:3000';
-    const devHost   = env.VITE_DEV_HOST || 'localhost';
+    const devHost = env.VITE_DEV_HOST || 'localhost';
 
     return {
         plugins: [
