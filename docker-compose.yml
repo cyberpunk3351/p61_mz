@@ -1,0 +1,44 @@
+services:
+    web:
+        build:
+            context: ./
+            dockerfile: ./.docker/php/Dockerfile.local
+        ports:
+            - ${APP_PORT:-8234}:80
+            - ${VITE_PORT:-5173}:${VITE_PORT:-5173}
+        working_dir: /var/www
+        volumes:
+            - ./:/var/www
+            - ./vendor/:/var/www/vendor
+        networks:
+            - app-network
+        # depends_on:
+        #     - redis
+        #     - mailpit
+    # redis:
+    #     image: redis:alpine
+    #     ports:
+    #         - ${FORWARD_REDIS_PORT:-6379}:6379
+    #     volumes:
+    #         - ${REDIS_VOLUME_LOCAL:-./database/redis-data}:/data
+    #     networks:
+    #         - network1
+    #     healthcheck:
+    #         test:
+    #             - CMD
+    #             - redis-cli
+    #             - ping
+    #         retries: 3
+    #         timeout: 5s
+    # mailpit:
+    #     image: axllent/mailpit:latest
+    #     ports:
+    #         - ${FORWARD_MAILPIT_PORT:-1025}:1025
+    #         - ${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025
+    #     volumes:
+    #         - ${MP_VOLUME_LOCAL:-./storage/mail-data}:/data
+    #     networks:
+    #         - network1
+networks:
+    app-network:
+        driver: bridge

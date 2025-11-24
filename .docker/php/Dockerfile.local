@@ -1,0 +1,74 @@
+FROM dunglas/frankenphp
+
+ARG UID=1000
+ARG GID=1000
+
+USER root
+
+# Сервим на 80 (без TLS)
+ENV SERVER_NAME="http://"
+
+# Базовые пакеты и PHP-расширения
+RUN set -eux; \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+      ca-certificates curl gnupg nano locales apt-transport-https supervisor \
+      libpq-dev libfreetype6-dev libjpeg62-turbo-dev zlib1g-dev libzip-dev \
+      libtidy-dev libonig-dev libicu-dev g++ wget rsync git zip unzip \
+      libpng-dev libxrender1 libfontconfig1 fontconfig libfontconfig1-dev && \
+    docker-php-ext-configure gd --with-freetype --with-jpeg && \
+    docker-php-ext-configure intl && \
+    docker-php-ext-install -j"$(nproc)" gd pdo_mysql pdo_pgsql pgsql zip exif pcntl bcmath mbstring opcache sockets && \
+    docker-php-source delete && \
+    rm -rf /var/lib/apt/lists/*
+
+# Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# NodeJS 22.x
+RUN mkdir -p /etc/apt/keyrings && \
+    curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key \
+      | gpg --batch --yes --dearmor -o /etc/apt/keyrings/nodesource.gpg && \
+    echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_22.x nodistro main" \
+      > /etc/apt/sources.list.d/nodesource.list && \
+    apt-get update && apt-get install -y --no-install-recommends nodejs && \
+    apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
+# Locale и часовой пояс (исправлен TZ)
+RUN locale-gen ru_RU.UTF-8
+ENV LANG=ru_RU.UTF-8 \
+    LANGUAGE=ru_RU.UTF-8 \
+    LC_ALL=ru_RU.UTF-8 \
+    TZ=Asia/Tbilisi
+
+# Пользователь www с настраиваемыми UID/GID
+RUN if getent group "${GID}" >/dev/null; then \
+      useradd -m -u "${UID}" -g "$(getent group ${GID} | cut -d: -f1)" -s /bin/bash www; \
+    else \
+      groupadd -g "${GID}" www && \
+      useradd -m -u "${UID}" -g www -s /bin/bash www; \
+    fi
+
+# Рабочая директория приложения
+WORKDIR /app
+
+# Служебные каталоги для Caddy/FrankenPHP (важно для прав)
+RUN mkdir -p /data /config && chown -R ${UID}:${GID} /data /config
+
+# Конфиги PHP и supervisor
+COPY ./.docker/php/php.ini /usr/local/etc/php/
+COPY ./.docker/etc/supervisor.d/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# Копируем код сразу с нужными правами (не разбрасываем в /)
+COPY --chown=${UID}:${GID} . /app
+
+# Устанавливаем зависимости Laravel под тем же пользователем, чтобы vendor/node_modules не были root-owned
+# RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist
+
+USER www
+
+# Если нужны front-ассеты, раскомментируй:
+# RUN npm ci && npm run build
+
+EXPOSE 80 443
+# ENTRYPOINT/CMD оставляем дефолтные из образа frankenphp (он поднимет Caddy/FrankenPHP)
