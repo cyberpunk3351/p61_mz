@@ -12,9 +12,11 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { add } from '@/routes/files';
+import { get } from '@/routes/playlists';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-vue-next';
+import { Folder, LayoutGrid, Plus, ListOrdered } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -23,6 +25,16 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
+    {
+        title: 'Add',
+        href: add(),
+        icon: Plus,
+    },
+    {
+        title: 'Playlist',
+        href: get(),
+        icon: ListOrdered,
+    },
 ];
 
 const footerNavItems: NavItem[] = [
@@ -30,11 +42,6 @@ const footerNavItems: NavItem[] = [
         title: 'Github Repo',
         href: 'https://github.com/laravel/vue-starter-kit',
         icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
     },
 ];
 </script>

@@ -7,8 +7,10 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthBase from '@/layouts/AuthLayout.vue';
 
+
 import { store } from '@/routes/login';
 import { Form, Head } from '@inertiajs/vue3';
+
 
 defineProps<{
     status?: string;
