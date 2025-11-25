@@ -3,6 +3,7 @@ services:
         build:
             context: ./
             dockerfile: ./.docker/php/Dockerfile.local
+        container_name: p61_app
         ports:
             - ${APP_PORT:-8234}:80
             - ${VITE_PORT:-5173}:${VITE_PORT:-5173}
@@ -40,5 +41,5 @@ services:
     #     networks:
     #         - network1
 networks:
-    app-network:
-        driver: bridge
+  app-network:
+    external: true
