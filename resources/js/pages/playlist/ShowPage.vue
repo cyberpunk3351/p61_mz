@@ -10,11 +10,10 @@ import {
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { get, show } from '@/routes/playlists';
+import { get } from '@/routes/playlists';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link } from '@inertiajs/vue3';
+import { Head } from '@inertiajs/vue3';
 import 'vue-sonner/style.css';
-import { Button } from '@/components/ui/button';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -43,7 +42,6 @@ const props = defineProps<{
                             <TableHead>ID</TableHead>
                             <TableHead>Title</TableHead>
                             <TableHead>Source</TableHead>
-                            <TableHead>Open</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -54,11 +52,6 @@ const props = defineProps<{
                             <TableCell>{{ item.id }}</TableCell>
                             <TableCell>{{ item.title }}</TableCell>
                             <TableCell>{{ item.source }}</TableCell>
-                            <TableCell>
-                                <Link :href="show(item.id)">
-                                    <Button>Open</Button>
-                                </Link>
-                            </TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>

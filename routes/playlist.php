@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Playlist\{
     GetController,
+    ShowController
 };
 use Illuminate\Support\Facades\Route;
 
@@ -11,4 +12,5 @@ Route::group([
     'as'     => 'playlists.',
 ], function () {
     Route::get('/', GetController::class)->name('get');
+    Route::get('/{playlist}', ShowController::class)->name('show');
 });
