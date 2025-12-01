@@ -1,11 +1,12 @@
 <?php
 
-namespace App\Http\Resources\Playlist;
+namespace App\Http\Resources\Artist;
 
+use App\Http\Resources\Album\AlbumResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class PlaylistsResource extends JsonResource
+class ArtistResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,8 +17,8 @@ class PlaylistsResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'title' => $this->title,
-            'source' => $this->source,
+            'name' => $this->name,
+            'albums' => AlbumResource::collection($this->whenLoaded('albums')),
             'date' => $this->created_at->toDateTimeString(),
         ];
     }

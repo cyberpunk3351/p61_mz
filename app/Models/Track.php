@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Track extends Model
@@ -16,4 +17,9 @@ class Track extends Model
         'spotify_track_id',
         'isrc',
     ];
+
+    public function artists(): BelongsToMany
+    {
+        return $this->belongsToMany(Artist::class, 'artist_track', 'track_id', 'artist_id');
+    }
 }

@@ -1,11 +1,13 @@
 <?php
 
-namespace App\Http\Resources\Playlist;
+declare(strict_types=1);
+
+namespace App\Http\Resources\Track;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class PlaylistsResource extends JsonResource
+class TrackResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -17,8 +19,10 @@ class PlaylistsResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
-            'source' => $this->source,
-            'date' => $this->created_at->toDateTimeString(),
+            'release_date' => $this->release_date,
+            'rating' => $this->rating,
+            'spotify_id' => $this->spotify_id,
+            'isrc' => $this->isrc,
         ];
     }
 }

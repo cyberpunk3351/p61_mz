@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Playlist;
 
-use App\Http\Resources\Playlist\PlaylistsResource;
+use App\Http\Resources\Playlist\PlaylistResource;
 use App\Models\Playlist;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -13,9 +13,10 @@ class ShowController
 {
     public function __invoke(Playlist $playlist): Response
     {
-        dd($playlist);
-        return Inertia::render('playlist/IndexPage', [
-            'playlist' => PlaylistsResource::collection(Playlist::all())
+        $playlist = $playlist->load('tracks.artists');
+
+        return Inertia::render('playlist/ShowPage', [
+            'playlist' => PlaylistResource::make($playlist),
         ]);
     }
 }

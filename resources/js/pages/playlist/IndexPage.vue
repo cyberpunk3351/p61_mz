@@ -15,6 +15,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import 'vue-sonner/style.css';
 import { Button } from '@/components/ui/button';
+import { computed } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -24,8 +25,23 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const props = defineProps<{
-    playlist: Object;
+    playlists: {
+        data: Array<{
+            id: number;
+            title: string;
+            source: string | null;
+        }>;
+        links: Array<{
+            url: string | null;
+            label: string;
+            active: boolean;
+        }>;
+    };
 }>();
+
+const paginationLinks = computed(() =>
+    props.playlists?.links?.filter((link) => link.url) ?? [],
+);
 </script>
 
 <template>
@@ -43,12 +59,12 @@ const props = defineProps<{
                             <TableHead>ID</TableHead>
                             <TableHead>Title</TableHead>
                             <TableHead>Source</TableHead>
-                            <TableHead>Open</TableHead>
+                            <TableHead></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         <TableRow
-                            v-for="item in props.playlist.data"
+                            v-for="item in props.playlists.data"
                             :key="item.id"
                         >
                             <TableCell>{{ item.id }}</TableCell>
@@ -59,6 +75,12 @@ const props = defineProps<{
                                     <Button>Open</Button>
                                 </Link>
                             </TableCell>
+                        </TableRow>
+                        <TableRow
+                            v-if="props.playlists.data.length === 0"
+                            class="text-center text-muted-foreground"
+                        >
+                            <TableCell colspan="4">No playlists found.</TableCell>
                         </TableRow>
                     </TableBody>
                 </Table>
