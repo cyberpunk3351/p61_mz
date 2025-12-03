@@ -13,7 +13,9 @@ class ShowController
 {
     public function __invoke(Playlist $playlist): Response
     {
-        $playlist = $playlist->load('tracks.artists');
+        $playlist->load(['tracks' => function ($query) {
+            $query->with('artists')->paginate(15);
+        }]);
 
         return Inertia::render('playlist/ShowPage', [
             'playlist' => PlaylistResource::make($playlist),

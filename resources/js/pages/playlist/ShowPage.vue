@@ -15,6 +15,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link } from '@inertiajs/vue3';
 import 'vue-sonner/style.css';
 import { computed } from 'vue';
+import { Button } from '@/components/ui/button';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -30,24 +31,21 @@ const props = defineProps<{
         source: string | null;
         date: string;
     };
-    tracks: {
-        data: Array<{
-            id: number;
-            title: string;
-            release_date: string | null;
-            rating: number | null;
-            spotify_id: string | null;
-            isrc: string | null;
-        }>;
-        links: Array<{
-            url: string | null;
-            label: string;
-            active: boolean;
-        }>;
-    };
 }>();
 
 const tracks = computed(() => props.tracks?.data ?? []);
+
+const copyToClipboard = (id) => {
+    const artist = document.getElementById('artist-' + id).innerText.trim();
+    const song = document.getElementById('song-' + id).innerText.trim();
+    let textToCopy = artist + ' - ' + song;
+    const textarea = document.createElement('textarea')
+    textarea.value = textToCopy
+    document.body.appendChild(textarea)
+    textarea.select()
+    document.execCommand('copy')
+    document.body.removeChild(textarea)
+}
 
 </script>
 
@@ -57,13 +55,13 @@ const tracks = computed(() => props.tracks?.data ?? []);
         <MzLayout>
             <div class="flex flex-col space-y-6">
                 <HeadingSmall
-                    :title="props.playlist.title"
+                    :title="props.playlist.data.title"
                     description="Track list"
                 />
 
-<!--                <pre>-->
-<!--                    {{ props.playlist.data.tracks }}-->
-<!--                </pre>-->
+                <pre>
+                    {{ props.playlist }}
+                </pre>
 
 
                 <div class="grid grid-cols-1 gap-2 rounded-lg border bg-card p-4 text-sm">
@@ -85,22 +83,26 @@ const tracks = computed(() => props.tracks?.data ?? []);
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead>ID</TableHead>
-                            <TableHead>Artist</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Release date</TableHead>
-                            <TableHead>Rating</TableHead>
+                            <TableHead class="text-xs">ID</TableHead>
+                            <TableHead class="text-xs">Artist</TableHead>
+                            <TableHead class="text-xs">Title</TableHead>
+                            <TableHead class="text-xs">Date</TableHead>
+                            <TableHead class="text-xs"></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         <TableRow v-for="track in props.playlist.data.tracks" :key="track.id">
-                            <TableCell>{{ track.id }}</TableCell>
-                            <TableCell :id="'artist-' + track.id" class="truncate max-w-[150px]">
+                            <TableCell class="text-xs">{{ track.id }}</TableCell>
+                            <TableCell :id="'artist-' + track.id" class="truncate max-w-[150px] text-xs">
                                 {{ track.artist.join(', ') }}
                             </TableCell>
-                            <TableCell>{{ track.title }}</TableCell>
-                            <TableCell>{{ track.release_date ?? '—' }}</TableCell>
-                            <TableCell>{{ track.rating ?? '—' }}</TableCell>
+                            <TableCell :id="'song-' + track.id" class="text-xs">{{ track.title }}</TableCell>
+                            <TableCell class="text-xs">{{ track.release_date ?? '—' }}</TableCell>
+                            <TableCell>
+                                <Button id="copyToClipboard" @click="copyToClipboard(track.id)"  variant="outline">
+                                    Copy
+                                </Button>
+                            </TableCell>
                         </TableRow>
                         <TableRow v-if="tracks.length === 0">
                             <TableCell
