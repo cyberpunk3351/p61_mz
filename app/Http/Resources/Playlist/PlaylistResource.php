@@ -2,7 +2,7 @@
 
 namespace App\Http\Resources\Playlist;
 
-use App\Http\Resources\Track\TrackResource;
+use App\Models\Track;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -30,20 +30,27 @@ class PlaylistResource extends JsonResource
     protected function transformArtists(): array
     {
         $transformedTracks = [];
-        if ($this->tracks) {
-            foreach ($this->tracks as $index => $track) {
-                $artists = $track->load('artists')->artists->pluck('name')->toArray();
-                $transformedTracks[] = [
-                    'id' => $track->id,
-                    'artist' => $artists,
-                    'release_date' => $track->release_date,
-                    'rating' => $track->rating,
-                    'title' => $track['title'],
-                    'genres' => $track['genre'],
-                ];
+        if ($this->relationLoaded('tracks')) {
+            foreach ($this->tracks as $track) {
+                $transformedTracks[] = $this->transformTrack($track);
             }
         }
 
         return $transformedTracks;
+    }
+
+    /**
+     * Transform single track.
+     */
+    protected function transformTrack(Track $track): array
+    {
+        return [
+            'id' => $track->id,
+            'artist' => $track->artists->pluck('name')->toArray(),
+            'release_date' => $track->release_date,
+            'rating' => $track->rating,
+            'title' => $track->title,
+            'genres' => $track->genre,
+        ];
     }
 }
