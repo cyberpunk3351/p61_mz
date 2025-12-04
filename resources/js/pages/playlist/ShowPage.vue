@@ -76,10 +76,11 @@ watch(
     },
     { immediate: true, deep: true },
 );
+const tracksAreEmpty = ref(false);
 
-const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
 const loadMoreParams = computed(() => {
     if (!props.tracks?.next_page_url) {
+        tracksAreEmpty.value = true;
         return null;
     }
 
