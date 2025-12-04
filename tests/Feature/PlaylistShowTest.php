@@ -51,4 +51,42 @@ class PlaylistShowTest extends TestCase
                 ->where('tracks.data.0.artist', ['Artist One'])
         );
     }
+
+    public function test_tracks_can_be_sorted_by_artist(): void
+    {
+        $user = User::factory()->create();
+
+        $playlist = Playlist::create([
+            'title' => 'Sorted Playlist',
+            'hash' => Str::uuid()->toString(),
+        ]);
+
+        $alpha = Artist::create(['name' => 'Alpha']);
+        $bravo = Artist::create(['name' => 'Bravo']);
+
+        $firstTrack = Track::create([
+            'title' => 'Second Song',
+        ]);
+
+        $secondTrack = Track::create([
+            'title' => 'First Song',
+        ]);
+
+        $firstTrack->artists()->attach($bravo);
+        $secondTrack->artists()->attach($alpha);
+
+        $playlist->tracks()->attach([$firstTrack->id, $secondTrack->id]);
+
+        $response = $this->actingAs($user)->get(route('playlists.show', [
+            'playlist' => $playlist,
+            'order_by' => 'artist',
+        ]));
+
+        $response->assertInertia(
+            fn (Assert $page) => $page
+                ->component('playlist/ShowPage')
+                ->where('tracks.data.0.id', $secondTrack->id)
+                ->where('tracks.data.0.artist', ['Alpha'])
+        );
+    }
 }

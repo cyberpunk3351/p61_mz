@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Playlist;
 
+use App\Http\Resources\Track\TrackResource;
 use App\Http\Resources\Playlist\PlaylistResource;
 use App\Models\Track;
 use App\Models\Playlist;
@@ -16,16 +17,11 @@ class ShowController
     {
         $tracks = $playlist->tracks()
             ->with('artists')
+            ->withMin('artists as sort_artist_name', 'name')
+            ->orderBy('sort_artist_name')
             ->paginate(15)
             ->through(static function (Track $track): array {
-                return [
-                    'id' => $track->id,
-                    'artist' => $track->artists->pluck('name')->toArray(),
-                    'release_date' => $track->release_date,
-                    'rating' => $track->rating,
-                    'title' => $track->title,
-                    'genres' => $track->genre,
-                ];
+                return TrackResource::make($track)->resolve();
             });
 
         return Inertia::render('playlist/ShowPage', [
@@ -33,9 +29,9 @@ class ShowController
                 'data' => PlaylistResource::make($playlist)->resolve(),
             ],
             'tracks' => [
-                'data' => $tracks->items(),
+                'data'         => $tracks->items(),
                 'current_page' => $tracks->currentPage(),
-                'next_page_url' => $tracks->nextPageUrl(),
+                'next_page_url'=> $tracks->nextPageUrl(),
             ],
         ]);
     }

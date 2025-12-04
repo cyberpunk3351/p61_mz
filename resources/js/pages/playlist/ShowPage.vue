@@ -11,9 +11,9 @@ import {
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { get } from '@/routes/playlists';
+import { get, show } from '@/routes/playlists';
 import { type BreadcrumbItem } from '@/types';
-import { Head, WhenVisible } from '@inertiajs/vue3';
+import { Head, WhenVisible, router } from '@inertiajs/vue3';
 import 'vue-sonner/style.css';
 import { computed, ref, watch } from 'vue';
 
@@ -49,9 +49,11 @@ const props = defineProps<{
         };
     };
     tracks: TracksPagination;
+    sort: 'title' | 'artist';
 }>();
 
 const loadedTracks = ref<Track[]>([]);
+const sort = ref(props.sort ?? 'title');
 
 watch(
     () => props.tracks,
@@ -76,17 +78,17 @@ watch(
     },
     { immediate: true, deep: true },
 );
-const tracksAreEmpty = ref(false);
+const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
 
 const loadMoreParams = computed(() => {
     if (!props.tracks?.next_page_url) {
-        tracksAreEmpty.value = true;
         return null;
     }
 
     return {
         data: {
             page: props.tracks.current_page + 1,
+            order_by: sort.value,
         },
         only: ['tracks'],
         preserveScroll: true,
@@ -94,6 +96,22 @@ const loadMoreParams = computed(() => {
         replace: true,
     };
 });
+
+const updateSort = (): void => {
+    loadedTracks.value = [];
+    router.get(
+        show.url(props.playlist.data.id, {
+            query: {
+                order_by: sort.value,
+            },
+        }),
+        {},
+        {
+            preserveScroll: true,
+            replace: true,
+        },
+    );
+};
 
 const copyToClipboard = (id: number): void => {
     const artist = document.getElementById('artist-' + id)?.innerText.trim() ?? '';
