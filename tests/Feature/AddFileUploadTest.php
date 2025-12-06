@@ -7,6 +7,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use App\Actions\FileAction;
 
 class AddFileUploadTest extends TestCase
 {
@@ -16,7 +17,7 @@ class AddFileUploadTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $response = $this->actingAs($user)->get(route('add.index'));
+        $response = $this->actingAs($user)->get(route('files.add'));
 
         $response->assertOk();
     }
@@ -32,21 +33,15 @@ Alice,alice@example.com,30
 Bob,bob@example.com,28
 CSV);
 
-        $response = $this->actingAs($user)->post(route('add.store'), [
+        $response = $this->actingAs($user)->post(route('files.store'), [
             'file' => $file,
         ]);
 
         $response->assertSessionHasNoErrors();
-        $response->assertSessionHas('success', 'File uploaded successfully!');
-        $response->assertSessionHas('csvPreview', function ($preview) {
-            $this->assertSame(2, $preview['total_rows']);
-            $this->assertSame('name', $preview['columns'][0]['key']);
-            $this->assertSame('name', $preview['columns'][0]['label']);
-            $this->assertSame('Alice', $preview['rows'][0]['name']);
+        $response->assertSessionHas('status');
+        $response->assertSessionHas('status_id');
 
-            return true;
-        });
-
-        Storage::disk('public')->assertExists('uploads/'.$file->hashName());
+        $hash = FileAction::generateHash($file);
+        Storage::disk('public')->assertExists('uploads/'.$hash.'.csv');
     }
 }

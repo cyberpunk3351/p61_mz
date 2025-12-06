@@ -18,6 +18,10 @@ readonly class StoreAlbumAction
         $releaseDate  = $row['album_date'] ?? null;
         $trackId = $row['spotify_album_id'] ?? null;
 
+        if (! is_string($albumName) || trim($albumName) === '') {
+            return null;
+        }
+
         return Album::firstOrCreate(
             [
                 'title' => $albumName,

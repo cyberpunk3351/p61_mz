@@ -24,6 +24,7 @@ import {
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { Info, Star } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
 
 type Album = {
     id: number;
@@ -70,6 +71,7 @@ const props = defineProps<{
 }>();
 
 const loadedTracks = ref<Track[]>([]);
+const searchTerm = ref<string>('');
 const hoverRatings = ref<Record<number, number | null>>({});
 const updatingTrackId = ref<number | null>(null);
 
@@ -98,6 +100,19 @@ watch(
 );
 
 const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
+const filteredTracks = computed(() => {
+    if (!searchTerm.value.trim()) {
+        return loadedTracks.value;
+    }
+
+    const term = searchTerm.value.toLowerCase();
+
+    return loadedTracks.value.filter(
+        (track) =>
+            track.title.toLowerCase().includes(term) ||
+            track.artist.some((name) => name.toLowerCase().includes(term)),
+    );
+});
 
 const loadMoreParams = computed(() => {
     if (!props.tracks?.next_page_url) {
@@ -209,6 +224,17 @@ const copyToClipboard = (id: number): void => {
                         <span class="font-medium">{{ props.playlist.data.date }}</span>
                     </div>
                 </div>
+                <div class="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center">
+                    <label class="text-sm font-medium text-muted-foreground sm:w-40">
+                        Search tracks
+                    </label>
+                    <Input
+                        v-model="searchTerm"
+                        name="search"
+                        placeholder="Filter by title or artist"
+                        class="w-full"
+                    />
+                </div>
                 <Table>
                     <TableHeader>
                         <TableRow>
@@ -218,7 +244,7 @@ const copyToClipboard = (id: number): void => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow v-for="track in loadedTracks" :key="track.id">
+                        <TableRow v-for="track in filteredTracks" :key="track.id">
                             <TableCell>
                                 <Collapsible class="flex w-[350px] flex-col gap-2">
                                     <div class="flex items-center justify-between gap-4 px-4">

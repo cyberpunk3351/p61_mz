@@ -79,16 +79,26 @@ readonly class CsvAction
             $track = ($this->storeTrackFromRow)($row);
             $album = ($this->storeAlbum)($row);
 
-            ($this->syncPlaylistTracks)($playlist, $track);
-            ($this->syncArtistsTracks)($artists['artists'], $track);
-            ($this->syncAlbumTracks)($album, $track);
-            ($this->syncArtistsAlbums)($artists['artists'], $album);
-
-            if ($artists) {
-                $imported++;
-            } else {
+            if ($track === null) {
                 $skipped++;
+                continue;
             }
+
+            $artistModels = $artists['artists'] ?? [];
+
+            ($this->syncPlaylistTracks)($playlist, $track);
+            if ($artistModels !== []) {
+                ($this->syncArtistsTracks)($artistModels, $track);
+            }
+
+            if ($album !== null) {
+                ($this->syncAlbumTracks)($album, $track);
+                if ($artistModels !== []) {
+                    ($this->syncArtistsAlbums)($artistModels, $album);
+                }
+            }
+
+            $imported++;
         }
 
         fclose($handle);

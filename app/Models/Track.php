@@ -7,9 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Laravel\Scout\Searchable;
 
 class Track extends Model
 {
+    use Searchable;
     use SoftDeletes;
 
     protected $fillable = [
@@ -49,5 +51,21 @@ class Track extends Model
     public function albums(): BelongsToMany
     {
         return $this->belongsToMany(Album::class, 'album_track', 'track_id', 'album_id');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toSearchableArray(): array
+    {
+        $this->loadMissing(['artists']);
+
+        return [
+            'id' => $this->id,
+            'title' => $this->title,
+            'rating' => $this->rating,
+            'release_date' => $this->getRawOriginal('release_date'),
+            'artists' => $this->artists->pluck('name')->all(),
+        ];
     }
 }

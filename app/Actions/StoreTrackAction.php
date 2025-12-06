@@ -20,6 +20,10 @@ readonly class StoreTrackAction
         $trackId = $row['spotify_track_id'] ?? null;
         $isrc = $row['i_s_r_c'] ?? null;
 
+        if (! is_string($trackName) || trim($trackName) === '') {
+            return null;
+        }
+
         return Track::firstOrCreate(
             [
                 'title' => $trackName,

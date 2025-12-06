@@ -14,13 +14,13 @@ class StoreArtistAction
      */
     public function __invoke(array $row): array
     {
-
         $namesRaw  = $row['artist'] ?? null;
 
         if (! is_string($namesRaw) || trim($namesRaw) === '') {
             return [
                 'imported' => 0,
                 'skipped'  => 0,
+                'artists'  => [],
             ];
         }
 

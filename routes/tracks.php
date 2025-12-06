@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Track\GetController;
 use App\Http\Controllers\Track\UpdateRatingController;
 use Illuminate\Support\Facades\Route;
 
@@ -8,5 +9,6 @@ Route::group([
     'prefix' => 'tracks',
     'as' => 'tracks.',
 ], function () {
+    Route::get('/', GetController::class)->name('index');
     Route::patch('/{track}/rating', UpdateRatingController::class)->name('rating');
 });

@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { add, store } from '@/routes/files';
+import AddController from '@/actions/App/Http/Controllers/File/AddController';
+import StoreController from '@/actions/App/Http/Controllers/File/StoreController';
 import { type BreadcrumbItem } from '@/types';
 import { Form, Head, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
@@ -17,7 +18,7 @@ import 'vue-sonner/style.css';
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Add',
-        href: add().url,
+        href: AddController.url(),
     },
 ];
 
@@ -66,7 +67,8 @@ const showToast = () => {
                 />
                 <Toaster />
                 <Form
-                    v-bind="store.form()"
+                    :action="StoreController.url()"
+                    method="post"
                     enctype="multipart/form-data"
                     class="space-y-6"
                     v-slot="{ errors, processing }"
