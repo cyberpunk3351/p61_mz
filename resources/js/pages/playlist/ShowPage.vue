@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import UpdateRatingController from '@/actions/App/Http/Controllers/Track/UpdateRatingController';
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
 import {
@@ -14,15 +15,24 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
 import { get } from '@/routes/playlists';
 import { type BreadcrumbItem } from '@/types';
-import { Head, WhenVisible} from '@inertiajs/vue3';
+import { Head, WhenVisible, router } from '@inertiajs/vue3';
 import 'vue-sonner/style.css';
 import { computed, ref, watch } from 'vue';
 import {
     Collapsible,
     CollapsibleContent,
     CollapsibleTrigger,
-} from '@/components/ui/collapsible'
-import { Info } from 'lucide-vue-next'
+} from '@/components/ui/collapsible';
+import { Info, Star } from 'lucide-vue-next';
+
+type Album = {
+    id: number;
+    title: string;
+};
+
+type AlbumCollection = {
+    data: Album[];
+};
 
 type Track = {
     id: number;
@@ -31,6 +41,7 @@ type Track = {
     rating: number | null;
     title: string;
     genres: string | null;
+    albums: AlbumCollection;
 };
 
 type TracksPagination = {
@@ -59,6 +70,8 @@ const props = defineProps<{
 }>();
 
 const loadedTracks = ref<Track[]>([]);
+const hoverRatings = ref<Record<number, number | null>>({});
+const updatingTrackId = ref<number | null>(null);
 
 watch(
     () => props.tracks,
@@ -83,6 +96,7 @@ watch(
     },
     { immediate: true, deep: true },
 );
+
 const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
 
 const loadMoreParams = computed(() => {
@@ -101,9 +115,64 @@ const loadMoreParams = computed(() => {
     };
 });
 
+const setHoverRating = (trackId: number, value: number | null): void => {
+    hoverRatings.value = {
+        ...hoverRatings.value,
+        [trackId]: value,
+    };
+};
+
+const starIsActive = (trackId: number, starValue: number): boolean => {
+    const hoveredValue = hoverRatings.value[trackId];
+
+    if (hoveredValue !== undefined && hoveredValue !== null) {
+        return starValue <= hoveredValue;
+    }
+
+    const currentTrack = loadedTracks.value.find(
+        ({ id }) => id === trackId,
+    );
+
+    if (currentTrack?.rating === null) {
+        return false;
+    }
+
+    return starValue <= currentTrack.rating;
+};
+
+const ratingIsUpdating = (trackId: number): boolean =>
+    updatingTrackId.value === trackId;
+
+const setRating = (track: Track, rating: number): void => {
+    if (ratingIsUpdating(track.id)) {
+        return;
+    }
+
+    const previousRating = track.rating;
+
+    track.rating = rating;
+    updatingTrackId.value = track.id;
+
+    router.patch(
+        UpdateRatingController.url({ track: track.id }),
+        { rating },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onError: () => {
+                track.rating = previousRating;
+            },
+            onFinish: () => {
+                updatingTrackId.value = null;
+                setHoverRating(track.id, null);
+            },
+        },
+    );
+};
 
 const copyToClipboard = (id: number): void => {
-    const artist = document.getElementById('artist-' + id)?.innerText.trim() ?? '';
+    const artist =
+        document.getElementById('artist-' + id)?.innerText.trim() ?? '';
     const song = document.getElementById('song-' + id)?.innerText.trim() ?? '';
     const textToCopy = artist + ' - ' + song;
     const textarea = document.createElement('textarea');
@@ -144,17 +213,13 @@ const copyToClipboard = (id: number): void => {
                     <TableHeader>
                         <TableRow>
                             <TableHead class="text-xs">Artist</TableHead>
+                            <TableHead class="text-xs">Rating</TableHead>
                             <TableHead class="text-xs"></TableHead>
                         </TableRow>
                     </TableHeader>
-                    <pre>
-<!--                        {{ loadedTracks }}-->
-                    </pre>
                     <TableBody>
                         <TableRow v-for="track in loadedTracks" :key="track.id">
                             <TableCell>
-
-
                                 <Collapsible class="flex w-[350px] flex-col gap-2">
                                     <div class="flex items-center justify-between gap-4 px-4">
                                         <div>
@@ -187,12 +252,46 @@ const copyToClipboard = (id: number): void => {
                                             </div>
                                             <p class="text-xs font-bold pt-1 uppercase">Album:</p>
                                             <div class="px-4 text-xs">
-                                                {{ track.albums.data[0].title ?? '—' }}
+                                                {{ track.albums?.data?.[0]?.title ?? '—' }}
                                             </div>
                                         </div>
                                     </CollapsibleContent>
                                 </Collapsible>
 
+                            </TableCell>
+                            <TableCell>
+                                <div class="flex items-center gap-2">
+                                    <div class="flex items-center gap-1">
+                                        <button
+                                            v-for="value in 5"
+                                            :key="value"
+                                            type="button"
+                                            class="p-1"
+                                            :disabled="ratingIsUpdating(track.id)"
+                                            :aria-label="`Set rating to ${value}`"
+                                            @mouseover="setHoverRating(track.id, value)"
+                                            @focus="setHoverRating(track.id, value)"
+                                            @mouseleave="setHoverRating(track.id, null)"
+                                            @blur="setHoverRating(track.id, null)"
+                                            @click="setRating(track, value)"
+                                        >
+                                            <Star
+                                                :class="[
+                                                    'size-5 transition-colors',
+                                                    ratingIsUpdating(track.id)
+                                                        ? 'opacity-50'
+                                                        : '',
+                                                    starIsActive(track.id, value)
+                                                        ? 'fill-amber-400 text-amber-400'
+                                                        : 'text-muted-foreground',
+                                                ]"
+                                            />
+                                        </button>
+                                    </div>
+                                    <span class="text-xs text-muted-foreground">
+                                        {{ track.rating ? `${track.rating}/5` : '—' }}
+                                    </span>
+                                </div>
                             </TableCell>
                             <TableCell>
                                 <Button id="copyToClipboard" @click="copyToClipboard(track.id)" variant="outline">
@@ -202,7 +301,7 @@ const copyToClipboard = (id: number): void => {
                         </TableRow>
                         <TableRow v-if="tracksAreEmpty">
                             <TableCell
-                                colspan="6"
+                                colspan="3"
                                 class="text-center text-muted-foreground"
                             >
                                 No tracks yet.
