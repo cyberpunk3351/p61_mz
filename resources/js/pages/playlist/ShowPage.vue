@@ -288,9 +288,7 @@ const copyToClipboard = (id: number): void => {
                                             />
                                         </button>
                                     </div>
-                                    <span class="text-xs text-muted-foreground">
-                                        {{ track.rating ? `${track.rating}/5` : '—' }}
-                                    </span>
+                                    c
                                 </div>
                             </TableCell>
                             <TableCell>

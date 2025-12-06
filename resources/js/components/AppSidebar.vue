@@ -17,7 +17,7 @@ import { get as playlistsGet } from '@/routes/playlists';
 import { get as artistsGet } from '@/routes/artists';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { Folder, LayoutGrid, Plus, ListOrdered } from 'lucide-vue-next';
+import { Folder, LayoutGrid, Plus, ListOrdered, User } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -39,7 +39,7 @@ const mainNavItems: NavItem[] = [
     {
         title: 'Artists',
         href: artistsGet(),
-        icon: ListOrdered,
+        icon: User,
     },
 ];
 
