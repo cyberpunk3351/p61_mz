@@ -16,6 +16,7 @@ readonly class CsvAction
         private SyncPlaylistTracksAction $syncPlaylistTracks,
         private SyncArtistsTracksAction $syncArtistsTracks,
         private SyncAlbumTracksAction $syncAlbumTracks,
+        private SyncArtistsAlbumsAction $syncArtistsAlbums,
     ) {}
 
     public function __invoke(array $data, Playlist $playlist): array
@@ -81,6 +82,7 @@ readonly class CsvAction
             ($this->syncPlaylistTracks)($playlist, $track);
             ($this->syncArtistsTracks)($artists['artists'], $track);
             ($this->syncAlbumTracks)($album, $track);
+            ($this->syncArtistsAlbums)($artists['artists'], $album);
 
             if ($artists) {
                 $imported++;

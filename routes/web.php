@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\AddController;
 
 Route::redirect('/', '/dashboard');
 
@@ -13,3 +12,4 @@ Route::get('dashboard', function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/files.php';
 require __DIR__.'/playlist.php';
+require __DIR__.'/artists.php';

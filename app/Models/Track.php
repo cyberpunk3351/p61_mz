@@ -18,6 +18,7 @@ class Track extends Model
         'rating',
         'spotify_track_id',
         'isrc',
+        'spotify_id',
     ];
 
     protected function casts(): array
@@ -43,5 +44,10 @@ class Track extends Model
     public function artists(): BelongsToMany
     {
         return $this->belongsToMany(Artist::class, 'artist_track', 'track_id', 'artist_id');
+    }
+
+    public function albums(): BelongsToMany
+    {
+        return $this->belongsToMany(Album::class, 'album_track', 'track_id', 'album_id');
     }
 }

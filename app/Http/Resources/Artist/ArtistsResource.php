@@ -4,18 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Resources\Artist;
 
-use App\Http\Resources\Album\AlbumResource;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * @property-read int $id
- * @property-read string $name
- * @property-read string|null $spotify_id
- * @property-read int|null $tracks_count
- * @property-read int|null $albums_count
+ * @property int $id
+ * @property string $name
+ * @property string|null $spotify_id
+ * @property int|null $tracks_count
+ * @property int|null $albums_count
  */
-class ArtistResource extends JsonResource
+class ArtistsResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -30,8 +29,6 @@ class ArtistResource extends JsonResource
             'spotify_id' => $this->spotify_id,
             'tracks_count' => $this->tracks_count ?? 0,
             'albums_count' => $this->albums_count ?? 0,
-            'albums' => AlbumResource::collection($this->whenLoaded('albums')),
-            'date' => $this->created_at->toDateTimeString(),
         ];
     }
 }

@@ -21,6 +21,8 @@ readonly class StoreAlbumAction
         return Album::firstOrCreate(
             [
                 'title' => $albumName,
+            ],
+            [
                 'year' => $releaseDate ?? null,
                 'spotify_id' => $trackId ?? null,
             ]

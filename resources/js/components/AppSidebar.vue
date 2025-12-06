@@ -13,7 +13,8 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { add } from '@/routes/files';
-import { get } from '@/routes/playlists';
+import { get as playlistsGet } from '@/routes/playlists';
+import { get as artistsGet } from '@/routes/artists';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { Folder, LayoutGrid, Plus, ListOrdered } from 'lucide-vue-next';
@@ -32,7 +33,12 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Playlist',
-        href: get(),
+        href: playlistsGet(),
+        icon: ListOrdered,
+    },
+    {
+        title: 'Artists',
+        href: artistsGet(),
         icon: ListOrdered,
     },
 ];

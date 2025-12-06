@@ -9,13 +9,20 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { get, show } from '@/routes/playlists';
+import { get } from '@/routes/playlists';
 import { type BreadcrumbItem } from '@/types';
-import { Head, WhenVisible, router } from '@inertiajs/vue3';
+import { Head, WhenVisible} from '@inertiajs/vue3';
 import 'vue-sonner/style.css';
 import { computed, ref, watch } from 'vue';
+import {
+    Collapsible,
+    CollapsibleContent,
+    CollapsibleTrigger,
+} from '@/components/ui/collapsible'
+import { Info } from 'lucide-vue-next'
 
 type Track = {
     id: number;
@@ -49,11 +56,9 @@ const props = defineProps<{
         };
     };
     tracks: TracksPagination;
-    sort: 'title' | 'artist';
 }>();
 
 const loadedTracks = ref<Track[]>([]);
-const sort = ref(props.sort ?? 'title');
 
 watch(
     () => props.tracks,
@@ -88,7 +93,6 @@ const loadMoreParams = computed(() => {
     return {
         data: {
             page: props.tracks.current_page + 1,
-            order_by: sort.value,
         },
         only: ['tracks'],
         preserveScroll: true,
@@ -97,21 +101,6 @@ const loadMoreParams = computed(() => {
     };
 });
 
-const updateSort = (): void => {
-    loadedTracks.value = [];
-    router.get(
-        show.url(props.playlist.data.id, {
-            query: {
-                order_by: sort.value,
-            },
-        }),
-        {},
-        {
-            preserveScroll: true,
-            replace: true,
-        },
-    );
-};
 
 const copyToClipboard = (id: number): void => {
     const artist = document.getElementById('artist-' + id)?.innerText.trim() ?? '';
@@ -154,21 +143,57 @@ const copyToClipboard = (id: number): void => {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead class="text-xs">ID</TableHead>
                             <TableHead class="text-xs">Artist</TableHead>
-                            <TableHead class="text-xs">Title</TableHead>
-                            <TableHead class="text-xs">Date</TableHead>
                             <TableHead class="text-xs"></TableHead>
                         </TableRow>
                     </TableHeader>
+                    <pre>
+<!--                        {{ loadedTracks }}-->
+                    </pre>
                     <TableBody>
                         <TableRow v-for="track in loadedTracks" :key="track.id">
-                            <TableCell class="text-xs">{{ track.id }}</TableCell>
-                            <TableCell :id="'artist-' + track.id" class="max-w-[150px] truncate text-xs">
-                                {{ track.artist.join(', ') }}
+                            <TableCell>
+
+
+                                <Collapsible class="flex w-[350px] flex-col gap-2">
+                                    <div class="flex items-center justify-between gap-4 px-4">
+                                        <div>
+                                            <div class="mb-1">
+                                                <p :id="'artist-' + track.id" class="font-bold">{{ track.artist.join(', ') }} </p>
+                                            </div>
+
+                                            <div>
+                                                <p :id="'song-' + track.id" class="text-gray-300">{{ track.title }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <CollapsibleTrigger>
+                                            <Button variant="ghost" size="icon" class="size-8">
+                                                <Info />
+                                                <span class="sr-only">Toggle</span>
+                                            </Button>
+                                        </CollapsibleTrigger>
+                                    </div>
+
+                                    <CollapsibleContent>
+                                        <div class="px-4">
+                                            <p class="text-xs font-bold uppercase">Artist:</p>
+                                            <div v-for="item in track.artist" :key="item" class="px-4 text-xs" >
+                                                {{ item }}
+                                            </div>
+                                            <p class="text-xs font-bold pt-1 uppercase">Date:</p>
+                                            <div class="px-4 text-xs">
+                                                {{ track.release_date ?? '—' }}
+                                            </div>
+                                            <p class="text-xs font-bold pt-1 uppercase">Album:</p>
+                                            <div class="px-4 text-xs">
+                                                {{ track.albums.data[0].title ?? '—' }}
+                                            </div>
+                                        </div>
+                                    </CollapsibleContent>
+                                </Collapsible>
+
                             </TableCell>
-                            <TableCell :id="'song-' + track.id" class="text-xs">{{ track.title }}</TableCell>
-                            <TableCell class="text-xs">{{ track.release_date ?? '—' }}</TableCell>
                             <TableCell>
                                 <Button id="copyToClipboard" @click="copyToClipboard(track.id)" variant="outline">
                                     Copy

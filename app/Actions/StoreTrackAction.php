@@ -23,6 +23,8 @@ readonly class StoreTrackAction
         return Track::firstOrCreate(
             [
                 'title' => $trackName,
+            ],
+            [
                 'release_date' => $releaseDate ?? null,
                 'spotify_id' => $trackId ?? null,
                 'isrc' => $isrc ?? null,
