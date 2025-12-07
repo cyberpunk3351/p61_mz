@@ -22,6 +22,11 @@ type Album = {
     title: string;
 };
 
+type Artist = {
+    id: number;
+    name: string;
+};
+
 type AlbumCollection = {
     data: Album[];
 };
@@ -29,7 +34,8 @@ type AlbumCollection = {
 type Track = {
     id: number;
     title: string;
-    artist: string[];
+    artist: Record<number, string>;
+    artists: Artist[];
     release_date: string | null;
     rating: number | null;
     albums: AlbumCollection;
@@ -178,7 +184,13 @@ const clearSearch = (): void => {
                                 {{ track.title }}
                             </TableCell>
                             <TableCell class="text-muted-foreground">
-                                {{ track.artist.join(', ') }}
+                                {{
+                                    track.artists?.length
+                                        ? track.artists
+                                              .map(({ name }) => name)
+                                              .join(', ')
+                                        : Object.values(track.artist ?? {}).join(', ')
+                                }}
                             </TableCell>
                             <TableCell class="text-muted-foreground">
                                 {{ track.release_date ?? '—' }}

@@ -13,9 +13,10 @@ import {
 
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
+import { show as showArtist } from '@/routes/artists';
 import { get } from '@/routes/playlists';
 import { type BreadcrumbItem } from '@/types';
-import { Head, WhenVisible, router } from '@inertiajs/vue3';
+import { Head, Link, WhenVisible, router } from '@inertiajs/vue3';
 import 'vue-sonner/style.css';
 import { computed, ref, watch } from 'vue';
 import {
@@ -31,13 +32,19 @@ type Album = {
     title: string;
 };
 
+type Artist = {
+    id: number;
+    name: string;
+};
+
 type AlbumCollection = {
     data: Album[];
 };
 
 type Track = {
     id: number;
-    artist: string[];
+    artist: Record<number, string>;
+    artists: Artist[];
     release_date: string | null;
     rating: number | null;
     title: string;
@@ -69,6 +76,8 @@ const props = defineProps<{
     };
     tracks: TracksPagination;
 }>();
+
+console.log(props.tracks);
 
 const loadedTracks = ref<Track[]>([]);
 const searchTerm = ref<string>('');
@@ -107,11 +116,20 @@ const filteredTracks = computed(() => {
 
     const term = searchTerm.value.toLowerCase();
 
-    return loadedTracks.value.filter(
-        (track) =>
-            track.title.toLowerCase().includes(term) ||
-            track.artist.some((name) => name.toLowerCase().includes(term)),
-    );
+    return loadedTracks.value.filter((track) => {
+        const titleMatch = track.title.toLowerCase().includes(term);
+
+        // artist: { 393: "1991", 555: "Noisia" }
+        const artistNames =
+            track.artists?.map(({ name }) => name) ??
+            Object.values(track.artist ?? {});
+
+        const artistMatch = artistNames.some((name) =>
+            name.toLowerCase().includes(term),
+        );
+
+        return titleMatch || artistMatch;
+    });
 });
 
 const loadMoreParams = computed(() => {
@@ -244,6 +262,9 @@ const copyToClipboard = (id: number): void => {
                     </TableHeader>
                     <TableBody>
                         <TableRow v-for="track in filteredTracks" :key="track.id">
+<!--                            <pre>-->
+<!--                                {{ track }}-->
+<!--                            </pre>-->
                             <TableCell>
                                 <Collapsible class="flex w-[350px] flex-col gap-2">
                                     <div class="flex items-center justify-between gap-4 px-4">
@@ -253,7 +274,31 @@ const copyToClipboard = (id: number): void => {
                                                 </p>
                                             </div>
                                             <div class="mb-1">
-                                                <p :id="'artist-' + track.id" class="text-gray-300">{{ track.artist.join(', ') }} </p>
+                                                <p
+                                                    :id="'artist-' + track.id"
+                                                    class="flex flex-wrap items-center gap-1 text-gray-300"
+                                                >
+                                                    <template v-if="track.artists?.length">
+                                                        <template
+                                                            v-for="(artist, index) in track.artists"
+                                                            :key="artist.id"
+                                                        >
+                                                            <Link
+                                                                :href="showArtist.url(artist.id)"
+                                                                class="text-primary transition hover:text-primary/80 hover:underline"
+                                                            >
+                                                                {{ artist.name }}
+                                                            </Link>
+                                                            <span
+                                                                v-if="index < track.artists.length - 1"
+                                                                class="text-muted-foreground"
+                                                            >
+                                                                ,
+                                                            </span>
+                                                        </template>
+                                                    </template>
+                                                    <span v-else class="text-muted-foreground">—</span>
+                                                </p>
                                             </div>
 
                                             <div class="flex items-center gap-2 pt-2">
@@ -288,8 +333,22 @@ const copyToClipboard = (id: number): void => {
                                     <CollapsibleContent>
                                         <div class="px-4">
                                             <p class="text-xs font-bold uppercase">Artist:</p>
-                                            <div v-for="item in track.artist" :key="item" class="px-4 text-xs" >
-                                                {{ item }}
+                                            <template v-if="track.artists?.length">
+                                                <div
+                                                    v-for="artist in track.artists"
+                                                    :key="artist.id"
+                                                    class="px-4 text-xs"
+                                                >
+                                                    <Link
+                                                        :href="showArtist.url(artist.id)"
+                                                        class="text-primary transition hover:text-primary/80 hover:underline"
+                                                    >
+                                                        {{ artist.name }}
+                                                    </Link>
+                                                </div>
+                                            </template>
+                                            <div v-else class="px-4 text-xs text-muted-foreground">
+                                                —
                                             </div>
                                             <p class="text-xs font-bold pt-1 uppercase">Date:</p>
                                             <div class="px-4 text-xs">

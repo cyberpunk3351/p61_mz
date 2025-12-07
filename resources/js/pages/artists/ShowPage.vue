@@ -28,9 +28,15 @@ type AlbumCollection = {
     data: Album[];
 };
 
+type TrackArtist = {
+    id: number;
+    name: string;
+};
+
 type Track = {
     id: number;
-    artist: string[];
+    artist: Record<number, string>;
+    artists: TrackArtist[];
     release_date: string | null;
     rating: number | null;
     title: string;
@@ -250,7 +256,13 @@ const loadMoreParams = computed(() => {
                                     {{ track.title }}
                                 </TableCell>
                                 <TableCell>
-                                    {{ track.artist.join(', ') }}
+                                    {{
+                                        track.artists?.length
+                                            ? track.artists
+                                                  .map(({ name }) => name)
+                                                  .join(', ')
+                                            : Object.values(track.artist ?? {}).join(', ')
+                                    }}
                                 </TableCell>
                                 <TableCell class="max-w-[220px]">
                                     <span

@@ -33,6 +33,8 @@ class ShowController
                 return TrackResource::make($track)->resolve();
             });
 
+//        dd($tracks->items());
+
         return Inertia::render('playlist/ShowPage', [
             'playlist' => [
                 'data' => PlaylistResource::make($playlist)->resolve(),
