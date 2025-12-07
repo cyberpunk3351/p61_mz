@@ -203,11 +203,18 @@ const setRating = (track: Track, rating: number): void => {
     );
 };
 
-const copyToClipboard = (id: number): void => {
-    const artist =
-        document.getElementById('artist-' + id)?.innerText.trim() ?? '';
-    const song = document.getElementById('song-' + id)?.innerText.trim() ?? '';
-    const textToCopy = artist + ' - ' + song;
+const copyToClipboard = (track: Track): void => {
+    const artistNames =
+        track.artists?.map(({ name }) => name) ??
+        Object.values(track.artist ?? {});
+
+    const textToCopy = `${artistNames.join(', ')} - ${track.title}`;
+
+    if (navigator?.clipboard?.writeText) {
+        void navigator.clipboard.writeText(textToCopy);
+        return;
+    }
+
     const textarea = document.createElement('textarea');
     textarea.value = textToCopy;
     document.body.appendChild(textarea);
@@ -364,7 +371,11 @@ const copyToClipboard = (id: number): void => {
 
                             </TableCell>
                             <TableCell>
-                                <Button id="copyToClipboard" @click="copyToClipboard(track.id)" variant="outline">
+                                <Button
+                                    id="copyToClipboard"
+                                    variant="outline"
+                                    @click="copyToClipboard(track)"
+                                >
                                     Copy
                                 </Button>
                             </TableCell>

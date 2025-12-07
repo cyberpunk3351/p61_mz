@@ -9,12 +9,14 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
 import { get, show } from '@/routes/artists';
 import { type BreadcrumbItem } from '@/types';
 import { Head, WhenVisible } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
+import { Copy } from 'lucide-vue-next';
 
 type Album = {
     id: number;
@@ -121,6 +123,22 @@ const loadMoreParams = computed(() => {
         replace: true,
     };
 });
+
+const copyAlbumInfo = (albumTitle: string): void => {
+    const textToCopy = `${props.artist.data.name} - ${albumTitle}`;
+
+    if (navigator?.clipboard?.writeText) {
+        void navigator.clipboard.writeText(textToCopy);
+        return;
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = textToCopy;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+};
 </script>
 
 <template>
@@ -181,6 +199,7 @@ const loadMoreParams = computed(() => {
                 <div class="space-y-3 rounded-lg border bg-card p-4">
                     <div class="flex items-center justify-between">
                         <p class="text-sm font-semibold">Albums</p>
+
                         <Badge variant="outline">{{ albumList.length }}</Badge>
                     </div>
                     <div
@@ -195,6 +214,7 @@ const loadMoreParams = computed(() => {
                             <div
                                 class="flex size-12 items-center justify-center overflow-hidden rounded-md border bg-muted"
                             >
+
                                 <img
                                     v-if="album.img_64_url"
                                     :src="album.img_64_url"
@@ -207,6 +227,7 @@ const loadMoreParams = computed(() => {
                                 >
                                     {{ album.title.slice(0, 2).toUpperCase() }}
                                 </span>
+
                             </div>
                             <div class="space-y-0.5">
                                 <p class="font-semibold leading-tight">
@@ -218,7 +239,20 @@ const loadMoreParams = computed(() => {
                                 <p class="text-xs text-muted-foreground">
                                     Rating: {{ album.rating ?? '—' }}
                                 </p>
+
                             </div>
+                            <div>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    @click="copyAlbumInfo(album.title)"
+                                >
+                                    <Copy />
+                                    <span class="sr-only">Copy album info</span>
+                                </Button>
+                            </div>
+
                         </div>
                     </div>
                     <p
@@ -240,7 +274,6 @@ const loadMoreParams = computed(() => {
                         <TableHeader>
                             <TableRow>
                                 <TableHead class="text-xs">Title</TableHead>
-                                <TableHead class="text-xs">Artists</TableHead>
                                 <TableHead class="text-xs">Albums</TableHead>
                                 <TableHead class="text-xs">
                                     Release date
@@ -252,18 +285,22 @@ const loadMoreParams = computed(() => {
                                 v-for="track in loadedTracks"
                                 :key="track.id"
                             >
-                                <TableCell class="font-medium">
-                                    {{ track.title }}
+                                <TableCell class="font-medium ">
+                                    <div>
+                                        {{ track.title }}
+
+                                    </div>
+                                    <div class="text-gray-400">
+                                        {{
+                                            track.artists?.length
+                                                ? track.artists
+                                                    .map(({ name }) => name)
+                                                    .join(', ')
+                                                : Object.values(track.artist ?? {}).join(', ')
+                                        }}
+                                    </div>
                                 </TableCell>
-                                <TableCell>
-                                    {{
-                                        track.artists?.length
-                                            ? track.artists
-                                                  .map(({ name }) => name)
-                                                  .join(', ')
-                                            : Object.values(track.artist ?? {}).join(', ')
-                                    }}
-                                </TableCell>
+
                                 <TableCell class="max-w-[220px]">
                                     <span
                                         v-if="track.albums?.data?.length"
