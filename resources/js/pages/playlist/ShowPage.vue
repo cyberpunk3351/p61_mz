@@ -239,7 +239,6 @@ const copyToClipboard = (id: number): void => {
                     <TableHeader>
                         <TableRow>
                             <TableHead class="text-xs">Artist</TableHead>
-                            <TableHead class="text-xs">Rating</TableHead>
                             <TableHead class="text-xs"></TableHead>
                         </TableRow>
                     </TableHeader>
@@ -249,13 +248,33 @@ const copyToClipboard = (id: number): void => {
                                 <Collapsible class="flex w-[350px] flex-col gap-2">
                                     <div class="flex items-center justify-between gap-4 px-4">
                                         <div>
+                                            <div>
+                                                <p :id="'song-' + track.id" class="font-bold ">{{ track.title }}
+                                                </p>
+                                            </div>
                                             <div class="mb-1">
-                                                <p :id="'artist-' + track.id" class="font-bold">{{ track.artist.join(', ') }} </p>
+                                                <p :id="'artist-' + track.id" class="text-gray-300">{{ track.artist.join(', ') }} </p>
                                             </div>
 
-                                            <div>
-                                                <p :id="'song-' + track.id" class="text-gray-300">{{ track.title }}
-                                                </p>
+                                            <div class="flex items-center gap-2 pt-2">
+                                                <div class="flex items-center gap-1">
+                                                    <button
+                                                        v-for="value in 5"
+                                                        :key="value"
+                                                        type="button"
+                                                        class="p-1"
+                                                        :disabled="ratingIsUpdating(track.id)"
+                                                        :aria-label="`Set rating to ${value}`"
+                                                        @mouseover="setHoverRating(track.id, value)"
+                                                        @focus="setHoverRating(track.id, value)"
+                                                        @mouseleave="setHoverRating(track.id, null)"
+                                                        @blur="setHoverRating(track.id, null)"
+                                                        @click="setRating(track, value)"
+                                                    >
+                                                        <Star :class="['size-5 transition-colors', ratingIsUpdating(track.id) ? 'opacity-50' : '', starIsActive(track.id, value) ? 'fill-amber-400  text-amber-400' : 'text-muted-foreground', ]"
+                                                        />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                         <CollapsibleTrigger>
@@ -284,38 +303,6 @@ const copyToClipboard = (id: number): void => {
                                     </CollapsibleContent>
                                 </Collapsible>
 
-                            </TableCell>
-                            <TableCell>
-                                <div class="flex items-center gap-2">
-                                    <div class="flex items-center gap-1">
-                                        <button
-                                            v-for="value in 5"
-                                            :key="value"
-                                            type="button"
-                                            class="p-1"
-                                            :disabled="ratingIsUpdating(track.id)"
-                                            :aria-label="`Set rating to ${value}`"
-                                            @mouseover="setHoverRating(track.id, value)"
-                                            @focus="setHoverRating(track.id, value)"
-                                            @mouseleave="setHoverRating(track.id, null)"
-                                            @blur="setHoverRating(track.id, null)"
-                                            @click="setRating(track, value)"
-                                        >
-                                            <Star
-                                                :class="[
-                                                    'size-5 transition-colors',
-                                                    ratingIsUpdating(track.id)
-                                                        ? 'opacity-50'
-                                                        : '',
-                                                    starIsActive(track.id, value)
-                                                        ? 'fill-amber-400 text-amber-400'
-                                                        : 'text-muted-foreground',
-                                                ]"
-                                            />
-                                        </button>
-                                    </div>
-                                    c
-                                </div>
                             </TableCell>
                             <TableCell>
                                 <Button id="copyToClipboard" @click="copyToClipboard(track.id)" variant="outline">
