@@ -14,7 +14,7 @@ import {
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
 import { show as showArtist } from '@/routes/artists';
-import { get } from '@/routes/playlists';
+import { get, show as showPlaylist } from '@/routes/playlists';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, WhenVisible, router } from '@inertiajs/vue3';
 import 'vue-sonner/style.css';
@@ -222,6 +222,18 @@ const copyToClipboard = (track: Track): void => {
     document.execCommand('copy');
     document.body.removeChild(textarea);
 };
+
+const resetSearch = (): void => {
+    searchTerm.value = '';
+    loadedTracks.value = [];
+
+    router.get(showPlaylist.url(props.playlist.data.id), {}, {
+        only: ['tracks'],
+        preserveScroll: true,
+        preserveState: true,
+        replace: true,
+    });
+};
 </script>
 
 <template>
@@ -253,12 +265,22 @@ const copyToClipboard = (track: Track): void => {
                     <label class="text-sm font-medium text-muted-foreground sm:w-40">
                         Search tracks
                     </label>
-                    <Input
-                        v-model="searchTerm"
-                        name="search"
-                        placeholder="Filter by title or artist"
-                        class="w-full"
-                    />
+                    <div class="flex w-full items-center gap-2">
+                        <Input
+                            v-model="searchTerm"
+                            name="search"
+                            placeholder="Filter by title or artist"
+                            class="w-full"
+                            @keydown.escape.prevent="resetSearch"
+                        />
+                        <Button
+                            variant="ghost"
+                            type="button"
+                            @click="resetSearch"
+                        >
+                            Reset
+                        </Button>
+                    </div>
                 </div>
                 <Table>
                     <TableHeader>
