@@ -10,6 +10,13 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
@@ -58,6 +65,13 @@ type TracksPagination = {
     next_page_url: string | null;
 };
 
+type SortOption =
+    | 'default'
+    | 'rating_desc'
+    | 'rating_asc'
+    | 'artist_asc'
+    | 'artist_desc';
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Playlist',
@@ -83,6 +97,7 @@ const loadedTracks = ref<Track[]>([]);
 const searchTerm = ref<string>('');
 const hoverRatings = ref<Record<number, number | null>>({});
 const updatingTrackId = ref<number | null>(null);
+const sortOption = ref<SortOption>('default');
 
 watch(
     () => props.tracks,
@@ -109,6 +124,20 @@ watch(
 );
 
 const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
+const sortLabel = computed(() => {
+    switch (sortOption.value) {
+        case 'rating_desc':
+            return 'Rating (high to low)';
+        case 'rating_asc':
+            return 'Rating (low to high)';
+        case 'artist_asc':
+            return 'Artist (A to Z)';
+        case 'artist_desc':
+            return 'Artist (Z to A)';
+        default:
+            return 'Original order';
+    }
+});
 const filteredTracks = computed(() => {
     if (!searchTerm.value.trim()) {
         return loadedTracks.value;
@@ -130,6 +159,81 @@ const filteredTracks = computed(() => {
 
         return titleMatch || artistMatch;
     });
+});
+const primaryArtistName = (track: Track): string => {
+    if (track.artists?.length) {
+        return track.artists[0].name;
+    }
+
+    const names = Object.values(track.artist ?? {});
+
+    return names[0] ?? '';
+};
+const compareByArtistName = (first: Track, second: Track): number => {
+    const firstName = primaryArtistName(first).toLowerCase();
+    const secondName = primaryArtistName(second).toLowerCase();
+
+    if (!firstName && !secondName) {
+        return 0;
+    }
+
+    if (!firstName) {
+        return 1;
+    }
+
+    if (!secondName) {
+        return -1;
+    }
+
+    return firstName.localeCompare(secondName);
+};
+const sortedTracks = computed(() => {
+    const tracks = [...filteredTracks.value];
+
+    switch (sortOption.value) {
+        case 'rating_desc':
+            return tracks.sort((first, second) => {
+                if (first.rating === null && second.rating === null) {
+                    return 0;
+                }
+
+                if (first.rating === null) {
+                    return 1;
+                }
+
+                if (second.rating === null) {
+                    return -1;
+                }
+
+                return second.rating - first.rating;
+            });
+        case 'rating_asc':
+            return tracks.sort((first, second) => {
+                if (first.rating === null && second.rating === null) {
+                    return 0;
+                }
+
+                if (first.rating === null) {
+                    return 1;
+                }
+
+                if (second.rating === null) {
+                    return -1;
+                }
+
+                return first.rating - second.rating;
+            });
+        case 'artist_asc':
+            return tracks.sort((first, second) =>
+                compareByArtistName(first, second),
+            );
+        case 'artist_desc':
+            return tracks.sort((first, second) =>
+                compareByArtistName(second, first),
+            );
+        default:
+            return tracks;
+    }
 });
 
 const loadMoreParams = computed(() => {
@@ -162,9 +266,7 @@ const starIsActive = (trackId: number, starValue: number): boolean => {
         return starValue <= hoveredValue;
     }
 
-    const currentTrack = loadedTracks.value.find(
-        ({ id }) => id === trackId,
-    );
+    const currentTrack = loadedTracks.value.find(({ id }) => id === trackId);
 
     if (currentTrack?.rating === null) {
         return false;
@@ -227,12 +329,16 @@ const resetSearch = (): void => {
     searchTerm.value = '';
     loadedTracks.value = [];
 
-    router.get(showPlaylist.url(props.playlist.data.id), {}, {
-        only: ['tracks'],
-        preserveScroll: true,
-        preserveState: true,
-        replace: true,
-    });
+    router.get(
+        showPlaylist.url(props.playlist.data.id),
+        {},
+        {
+            only: ['tracks'],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        },
+    );
 };
 </script>
 
@@ -245,10 +351,14 @@ const resetSearch = (): void => {
                     :title="props.playlist.data.title"
                     description="Track list"
                 />
-                <div class="grid grid-cols-1 gap-2 rounded-lg border bg-card p-4 text-sm">
+                <div
+                    class="grid grid-cols-1 gap-2 rounded-lg border bg-card p-4 text-sm"
+                >
                     <div class="flex items-center justify-between">
                         <span class="text-muted-foreground">ID</span>
-                        <span class="font-medium">{{ props.playlist.data.id }}</span>
+                        <span class="font-medium">{{
+                            props.playlist.data.id
+                        }}</span>
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-muted-foreground">Source</span>
@@ -258,28 +368,87 @@ const resetSearch = (): void => {
                     </div>
                     <div class="flex items-center justify-between">
                         <span class="text-muted-foreground">Created</span>
-                        <span class="font-medium">{{ props.playlist.data.date }}</span>
+                        <span class="font-medium">{{
+                            props.playlist.data.date
+                        }}</span>
                     </div>
                 </div>
-                <div class="flex flex-col gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center">
-                    <label class="text-sm font-medium text-muted-foreground sm:w-40">
-                        Search tracks
-                    </label>
-                    <div class="flex w-full items-center gap-2">
-                        <Input
-                            v-model="searchTerm"
-                            name="search"
-                            placeholder="Filter by title or artist"
-                            class="w-full"
-                            @keydown.escape.prevent="resetSearch"
-                        />
-                        <Button
-                            variant="ghost"
-                            type="button"
-                            @click="resetSearch"
+                <div class="flex flex-col gap-4 rounded-lg border bg-card p-4">
+                    <div
+                        class="flex flex-col gap-3 sm:flex-row sm:items-center"
+                    >
+                        <label
+                            class="text-sm font-medium text-muted-foreground sm:w-40"
                         >
-                            Reset
-                        </Button>
+                            Search tracks
+                        </label>
+                        <div class="flex w-full items-center gap-2">
+                            <Input
+                                v-model="searchTerm"
+                                name="search"
+                                placeholder="Filter by title or artist"
+                                class="w-full"
+                                @keydown.escape.prevent="resetSearch"
+                            />
+                            <Button
+                                variant="ghost"
+                                type="button"
+                                @click="resetSearch"
+                            >
+                                Reset
+                            </Button>
+                        </div>
+                    </div>
+                    <div
+                        class="flex flex-col gap-3 sm:flex-row sm:items-center"
+                    >
+                        <label
+                            class="text-sm font-medium text-muted-foreground sm:w-40"
+                        >
+                            Sort tracks
+                        </label>
+                        <div class="flex w-full items-center gap-2">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger :as-child="true">
+                                    <Button
+                                        variant="outline"
+                                        class="w-full justify-between sm:w-60"
+                                        type="button"
+                                    >
+                                        <span>Sort: {{ sortLabel }}</span>
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" class="w-56">
+                                    <DropdownMenuRadioGroup
+                                        v-model="sortOption"
+                                    >
+                                        <DropdownMenuRadioItem value="default">
+                                            Original order
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value="rating_desc"
+                                        >
+                                            Rating (high to low)
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value="rating_asc"
+                                        >
+                                            Rating (low to high)
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value="artist_asc"
+                                        >
+                                            Artist (A to Z)
+                                        </DropdownMenuRadioItem>
+                                        <DropdownMenuRadioItem
+                                            value="artist_desc"
+                                        >
+                                            Artist (Z to A)
+                                        </DropdownMenuRadioItem>
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
                 </div>
                 <Table>
@@ -290,16 +459,24 @@ const resetSearch = (): void => {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        <TableRow v-for="track in filteredTracks" :key="track.id">
-<!--                            <pre>-->
-<!--                                {{ track }}-->
-<!--                            </pre>-->
+                        <TableRow v-for="track in sortedTracks" :key="track.id">
+                            <!--                            <pre>-->
+                            <!--                                {{ track }}-->
+                            <!--                            </pre>-->
                             <TableCell>
-                                <Collapsible class="flex w-[350px] flex-col gap-2">
-                                    <div class="flex items-center justify-between gap-4 px-4">
+                                <Collapsible
+                                    class="flex w-[350px] flex-col gap-2"
+                                >
+                                    <div
+                                        class="flex items-center justify-between gap-4 px-4"
+                                    >
                                         <div>
                                             <div>
-                                                <p :id="'song-' + track.id" class="font-bold ">{{ track.title }}
+                                                <p
+                                                    :id="'song-' + track.id"
+                                                    class="font-bold"
+                                                >
+                                                    {{ track.title }}
                                                 </p>
                                             </div>
                                             <div class="mb-1">
@@ -307,90 +484,189 @@ const resetSearch = (): void => {
                                                     :id="'artist-' + track.id"
                                                     class="flex flex-wrap items-center gap-1 text-gray-300"
                                                 >
-                                                    <template v-if="track.artists?.length">
+                                                    <template
+                                                        v-if="
+                                                            track.artists
+                                                                ?.length
+                                                        "
+                                                    >
                                                         <template
-                                                            v-for="(artist, index) in track.artists"
+                                                            v-for="(
+                                                                artist, index
+                                                            ) in track.artists"
                                                             :key="artist.id"
                                                         >
                                                             <Link
-                                                                :href="showArtist.url(artist.id)"
+                                                                :href="
+                                                                    showArtist.url(
+                                                                        artist.id,
+                                                                    )
+                                                                "
                                                                 class="text-primary transition hover:text-primary/80 hover:underline"
                                                             >
-                                                                {{ artist.name }}
+                                                                {{
+                                                                    artist.name
+                                                                }}
                                                             </Link>
                                                             <span
-                                                                v-if="index < track.artists.length - 1"
+                                                                v-if="
+                                                                    index <
+                                                                    track
+                                                                        .artists
+                                                                        .length -
+                                                                        1
+                                                                "
                                                                 class="text-muted-foreground"
                                                             >
                                                                 ,
                                                             </span>
                                                         </template>
                                                     </template>
-                                                    <span v-else class="text-muted-foreground">—</span>
+                                                    <span
+                                                        v-else
+                                                        class="text-muted-foreground"
+                                                        >—</span
+                                                    >
                                                 </p>
                                             </div>
 
-                                            <div class="flex items-center gap-2 pt-2">
-                                                <div class="flex items-center gap-1">
+                                            <div
+                                                class="flex items-center gap-2 pt-2"
+                                            >
+                                                <div
+                                                    class="flex items-center gap-1"
+                                                >
                                                     <button
                                                         v-for="value in 5"
                                                         :key="value"
                                                         type="button"
                                                         class="p-1"
-                                                        :disabled="ratingIsUpdating(track.id)"
+                                                        :disabled="
+                                                            ratingIsUpdating(
+                                                                track.id,
+                                                            )
+                                                        "
                                                         :aria-label="`Set rating to ${value}`"
-                                                        @mouseover="setHoverRating(track.id, value)"
-                                                        @focus="setHoverRating(track.id, value)"
-                                                        @mouseleave="setHoverRating(track.id, null)"
-                                                        @blur="setHoverRating(track.id, null)"
-                                                        @click="setRating(track, value)"
+                                                        @mouseover="
+                                                            setHoverRating(
+                                                                track.id,
+                                                                value,
+                                                            )
+                                                        "
+                                                        @focus="
+                                                            setHoverRating(
+                                                                track.id,
+                                                                value,
+                                                            )
+                                                        "
+                                                        @mouseleave="
+                                                            setHoverRating(
+                                                                track.id,
+                                                                null,
+                                                            )
+                                                        "
+                                                        @blur="
+                                                            setHoverRating(
+                                                                track.id,
+                                                                null,
+                                                            )
+                                                        "
+                                                        @click="
+                                                            setRating(
+                                                                track,
+                                                                value,
+                                                            )
+                                                        "
                                                     >
-                                                        <Star :class="['size-5 transition-colors', ratingIsUpdating(track.id) ? 'opacity-50' : '', starIsActive(track.id, value) ? 'fill-amber-400  text-amber-400' : 'text-muted-foreground', ]"
+                                                        <Star
+                                                            :class="[
+                                                                'size-5 transition-colors',
+                                                                ratingIsUpdating(
+                                                                    track.id,
+                                                                )
+                                                                    ? 'opacity-50'
+                                                                    : '',
+                                                                starIsActive(
+                                                                    track.id,
+                                                                    value,
+                                                                )
+                                                                    ? 'fill-amber-400 text-amber-400'
+                                                                    : 'text-muted-foreground',
+                                                            ]"
                                                         />
                                                     </button>
                                                 </div>
                                             </div>
                                         </div>
                                         <CollapsibleTrigger>
-                                            <Button variant="ghost" size="icon" class="size-8">
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                class="size-8"
+                                            >
                                                 <Info />
-                                                <span class="sr-only">Toggle</span>
+                                                <span class="sr-only"
+                                                    >Toggle</span
+                                                >
                                             </Button>
                                         </CollapsibleTrigger>
                                     </div>
 
                                     <CollapsibleContent>
                                         <div class="px-4">
-                                            <p class="text-xs font-bold uppercase">Artist:</p>
-                                            <template v-if="track.artists?.length">
+                                            <p
+                                                class="text-xs font-bold uppercase"
+                                            >
+                                                Artist:
+                                            </p>
+                                            <template
+                                                v-if="track.artists?.length"
+                                            >
                                                 <div
                                                     v-for="artist in track.artists"
                                                     :key="artist.id"
                                                     class="px-4 text-xs"
                                                 >
                                                     <Link
-                                                        :href="showArtist.url(artist.id)"
+                                                        :href="
+                                                            showArtist.url(
+                                                                artist.id,
+                                                            )
+                                                        "
                                                         class="text-primary transition hover:text-primary/80 hover:underline"
                                                     >
                                                         {{ artist.name }}
                                                     </Link>
                                                 </div>
                                             </template>
-                                            <div v-else class="px-4 text-xs text-muted-foreground">
+                                            <div
+                                                v-else
+                                                class="px-4 text-xs text-muted-foreground"
+                                            >
                                                 —
                                             </div>
-                                            <p class="text-xs font-bold pt-1 uppercase">Date:</p>
+                                            <p
+                                                class="pt-1 text-xs font-bold uppercase"
+                                            >
+                                                Date:
+                                            </p>
                                             <div class="px-4 text-xs">
                                                 {{ track.release_date ?? '—' }}
                                             </div>
-                                            <p class="text-xs font-bold pt-1 uppercase">Album:</p>
+                                            <p
+                                                class="pt-1 text-xs font-bold uppercase"
+                                            >
+                                                Album:
+                                            </p>
                                             <div class="px-4 text-xs">
-                                                {{ track.albums?.data?.[0]?.title ?? '—' }}
+                                                {{
+                                                    track.albums?.data?.[0]
+                                                        ?.title ?? '—'
+                                                }}
                                             </div>
                                         </div>
                                     </CollapsibleContent>
                                 </Collapsible>
-
                             </TableCell>
                             <TableCell>
                                 <Button
