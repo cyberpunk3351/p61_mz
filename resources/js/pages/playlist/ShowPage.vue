@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import DetachTrackController from '@/actions/App/Http/Controllers/Playlist/DetachTrackController';
 import UpdateRatingController from '@/actions/App/Http/Controllers/Track/UpdateRatingController';
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
@@ -91,12 +92,11 @@ const props = defineProps<{
     tracks: TracksPagination;
 }>();
 
-console.log(props.tracks);
-
 const loadedTracks = ref<Track[]>([]);
 const searchTerm = ref<string>('');
 const hoverRatings = ref<Record<number, number | null>>({});
 const updatingTrackId = ref<number | null>(null);
+const removingTrackId = ref<number | null>(null);
 const sortOption = ref<SortOption>('default');
 
 watch(
@@ -278,6 +278,9 @@ const starIsActive = (trackId: number, starValue: number): boolean => {
 const ratingIsUpdating = (trackId: number): boolean =>
     updatingTrackId.value === trackId;
 
+const trackIsRemoving = (trackId: number): boolean =>
+    removingTrackId.value === trackId;
+
 const setRating = (track: Track, rating: number): void => {
     if (ratingIsUpdating(track.id)) {
         return;
@@ -300,6 +303,34 @@ const setRating = (track: Track, rating: number): void => {
             onFinish: () => {
                 updatingTrackId.value = null;
                 setHoverRating(track.id, null);
+            },
+        },
+    );
+};
+
+const removeTrackFromPlaylist = (track: Track): void => {
+    if (trackIsRemoving(track.id)) {
+        return;
+    }
+
+    removingTrackId.value = track.id;
+
+    router.delete(
+        DetachTrackController.url({
+            playlist: props.playlist.data.id,
+            track: track.id,
+        }),
+        {
+            only: ['tracks'],
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                loadedTracks.value = loadedTracks.value.filter(
+                    ({ id }) => id !== track.id,
+                );
+            },
+            onFinish: () => {
+                removingTrackId.value = null;
             },
         },
     );
@@ -454,8 +485,10 @@ const resetSearch = (): void => {
                 <Table>
                     <TableHeader>
                         <TableRow>
-                            <TableHead class="text-xs">Artist</TableHead>
-                            <TableHead class="text-xs"></TableHead>
+                            <TableHead class="text-xs">Track</TableHead>
+                            <TableHead class="text-right text-xs">
+                                Actions
+                            </TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -668,19 +701,33 @@ const resetSearch = (): void => {
                                     </CollapsibleContent>
                                 </Collapsible>
                             </TableCell>
-                            <TableCell>
-                                <Button
-                                    id="copyToClipboard"
-                                    variant="outline"
-                                    @click="copyToClipboard(track)"
-                                >
-                                    Copy
-                                </Button>
+                            <TableCell class="text-right">
+                                <div class="flex justify-end gap-2">
+                                    <Button
+                                        id="copyToClipboard"
+                                        variant="outline"
+                                        type="button"
+                                        @click="copyToClipboard(track)"
+                                    >
+                                        Copy
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        type="button"
+                                        :disabled="trackIsRemoving(track.id)"
+                                        @click="removeTrackFromPlaylist(track)"
+                                    >
+                                        <span v-if="trackIsRemoving(track.id)">
+                                            Removing...
+                                        </span>
+                                        <span v-else>Remove</span>
+                                    </Button>
+                                </div>
                             </TableCell>
                         </TableRow>
                         <TableRow v-if="tracksAreEmpty">
                             <TableCell
-                                colspan="3"
+                                colspan="2"
                                 class="text-center text-muted-foreground"
                             >
                                 No tracks yet.

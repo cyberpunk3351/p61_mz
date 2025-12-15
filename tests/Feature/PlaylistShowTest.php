@@ -89,4 +89,39 @@ class PlaylistShowTest extends TestCase
                 ->where('tracks.data.0.artist', ['Alpha'])
         );
     }
+
+    public function test_track_can_be_detached_from_playlist(): void
+    {
+        $user = User::factory()->create();
+
+        $playlist = Playlist::create([
+            'title' => 'Deletable Playlist',
+            'hash' => Str::uuid()->toString(),
+        ]);
+
+        $track = Track::create([
+            'title' => 'Removable Track',
+        ]);
+
+        $playlist->tracks()->attach($track);
+
+        $response = $this
+            ->actingAs($user)
+            ->delete(route('playlists.tracks.detach', [
+                'playlist' => $playlist,
+                'track' => $track,
+            ]));
+
+        $response->assertRedirect();
+
+        $this->assertDatabaseMissing('playlist_track', [
+            'playlist_id' => $playlist->id,
+            'track_id' => $track->id,
+        ]);
+
+        $this->assertDatabaseHas('tracks', [
+            'id' => $track->id,
+            'title' => 'Removable Track',
+        ]);
+    }
 }
