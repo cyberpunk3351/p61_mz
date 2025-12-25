@@ -18,6 +18,15 @@ import {
     DropdownMenuRadioItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
@@ -92,11 +101,14 @@ const props = defineProps<{
     tracks: TracksPagination;
 }>();
 
-const loadedTracks = ref<Track[]>([]);
+const loadedTracks = ref<Track[]>([...props.tracks.data]);
 const searchTerm = ref<string>('');
 const hoverRatings = ref<Record<number, number | null>>({});
 const updatingTrackId = ref<number | null>(null);
 const removingTrackId = ref<number | null>(null);
+const trackPendingRemoval = ref<Track | null>(null);
+const removalDialogOpen = ref<boolean>(false);
+const selectedArtistInitial = ref<string | null>(null);
 const sortOption = ref<SortOption>('default');
 
 watch(
@@ -138,26 +150,57 @@ const sortLabel = computed(() => {
             return 'Original order';
     }
 });
-const filteredTracks = computed(() => {
-    if (!searchTerm.value.trim()) {
-        return loadedTracks.value;
-    }
+const getArtistNames = (track: Track): string[] =>
+    track.artists?.map(({ name }) => name) ??
+    Object.values(track.artist ?? {});
+const availableArtistInitials = computed(() => {
+    const initials = new Set<string>();
 
+    loadedTracks.value.forEach((track) => {
+        const name = primaryArtistName(track).trim();
+        const firstLetter = name.charAt(0).toUpperCase();
+
+        if (firstLetter) {
+            initials.add(firstLetter);
+        }
+    });
+
+    return Array.from(initials).sort((first, second) =>
+        first.localeCompare(second),
+    );
+});
+const filteredTracks = computed(() => {
     const term = searchTerm.value.toLowerCase();
+    const hasSearch = Boolean(term.trim());
+    const hasInitial = Boolean(selectedArtistInitial.value);
 
     return loadedTracks.value.filter((track) => {
         const titleMatch = track.title.toLowerCase().includes(term);
 
         // artist: { 393: "1991", 555: "Noisia" }
-        const artistNames =
-            track.artists?.map(({ name }) => name) ??
-            Object.values(track.artist ?? {});
+        const artistNames = getArtistNames(track);
 
-        const artistMatch = artistNames.some((name) =>
-            name.toLowerCase().includes(term),
-        );
+        const artistMatch = hasSearch
+            ? artistNames.some((name) => name.toLowerCase().includes(term))
+            : true;
 
-        return titleMatch || artistMatch;
+        const initialMatch = hasInitial
+            ? (() => {
+                  const name = primaryArtistName(track).trim();
+                  const firstLetter = name.charAt(0).toUpperCase();
+
+                  return (
+                      firstLetter &&
+                      firstLetter === selectedArtistInitial.value
+                  );
+              })()
+            : true;
+
+        if (hasSearch) {
+            return (titleMatch || artistMatch) && initialMatch;
+        }
+
+        return initialMatch;
     });
 });
 const primaryArtistName = (track: Track): string => {
@@ -281,6 +324,17 @@ const ratingIsUpdating = (trackId: number): boolean =>
 const trackIsRemoving = (trackId: number): boolean =>
     removingTrackId.value === trackId;
 
+watch(removalDialogOpen, (isOpen) => {
+    if (!isOpen) {
+        trackPendingRemoval.value = null;
+    }
+});
+
+const openRemovalDialog = (track: Track): void => {
+    trackPendingRemoval.value = track;
+    removalDialogOpen.value = true;
+};
+
 const setRating = (track: Track, rating: number): void => {
     if (ratingIsUpdating(track.id)) {
         return;
@@ -328,6 +382,8 @@ const removeTrackFromPlaylist = (track: Track): void => {
                 loadedTracks.value = loadedTracks.value.filter(
                     ({ id }) => id !== track.id,
                 );
+                removalDialogOpen.value = false;
+                trackPendingRemoval.value = null;
             },
             onFinish: () => {
                 removingTrackId.value = null;
@@ -336,11 +392,16 @@ const removeTrackFromPlaylist = (track: Track): void => {
     );
 };
 
-const copyToClipboard = (track: Track): void => {
-    const artistNames =
-        track.artists?.map(({ name }) => name) ??
-        Object.values(track.artist ?? {});
+const confirmRemoval = (): void => {
+    if (!trackPendingRemoval.value) {
+        return;
+    }
 
+    removeTrackFromPlaylist(trackPendingRemoval.value);
+};
+
+const copyToClipboard = (track: Track): void => {
+    const artistNames = getArtistNames(track);
     const textToCopy = `${artistNames.join(', ')} - ${track.title}`;
 
     if (navigator?.clipboard?.writeText) {
@@ -359,6 +420,7 @@ const copyToClipboard = (track: Track): void => {
 const resetSearch = (): void => {
     searchTerm.value = '';
     loadedTracks.value = [];
+    selectedArtistInitial.value = null;
 
     router.get(
         showPlaylist.url(props.playlist.data.id),
@@ -481,6 +543,51 @@ const resetSearch = (): void => {
                             </DropdownMenu>
                         </div>
                     </div>
+                    <div
+                        class="flex flex-col gap-3 sm:flex-row sm:items-center"
+                    >
+                        <label
+                            class="text-sm font-medium text-muted-foreground sm:w-40"
+                        >
+                            Artist initial
+                        </label>
+                        <div
+                            class="flex flex-wrap gap-2"
+                            role="group"
+                            aria-label="Filter tracks by artist initial"
+                        >
+                            <Button
+                                type="button"
+                                size="sm"
+                                class="min-w-[52px]"
+                                :aria-pressed="selectedArtistInitial === null"
+                                :variant="
+                                    selectedArtistInitial === null
+                                        ? 'secondary'
+                                        : 'outline'
+                                "
+                                @click="selectedArtistInitial = null"
+                            >
+                                All
+                            </Button>
+                            <Button
+                                v-for="initial in availableArtistInitials"
+                                :key="initial"
+                                type="button"
+                                size="sm"
+                                class="min-w-[52px]"
+                                :aria-pressed="selectedArtistInitial === initial"
+                                :variant="
+                                    selectedArtistInitial === initial
+                                        ? 'secondary'
+                                        : 'outline'
+                                "
+                                @click="selectedArtistInitial = initial"
+                            >
+                                {{ initial }}
+                            </Button>
+                        </div>
+                    </div>
                 </div>
                 <Table>
                     <TableHeader>
@@ -498,12 +605,12 @@ const resetSearch = (): void => {
                             <!--                            </pre>-->
                             <TableCell>
                                 <Collapsible
-                                    class="flex w-[350px] flex-col gap-2"
+                                    class="flex w-full flex-col gap-3 sm:w-[420px]"
                                 >
                                     <div
-                                        class="flex items-center justify-between gap-4 px-4"
+                                        class="flex items-start justify-between gap-4 px-4 sm:items-center"
                                     >
-                                        <div>
+                                        <div class="space-y-3">
                                             <div>
                                                 <p
                                                     :id="'song-' + track.id"
@@ -702,11 +809,14 @@ const resetSearch = (): void => {
                                 </Collapsible>
                             </TableCell>
                             <TableCell class="text-right">
-                                <div class="flex justify-end gap-2">
+                                <div
+                                    class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end"
+                                >
                                     <Button
                                         id="copyToClipboard"
                                         variant="outline"
                                         type="button"
+                                        class="w-full sm:w-auto"
                                         @click="copyToClipboard(track)"
                                     >
                                         Copy
@@ -714,8 +824,9 @@ const resetSearch = (): void => {
                                     <Button
                                         variant="destructive"
                                         type="button"
+                                        class="w-full sm:w-auto"
                                         :disabled="trackIsRemoving(track.id)"
-                                        @click="removeTrackFromPlaylist(track)"
+                                        @click="openRemovalDialog(track)"
                                     >
                                         <span v-if="trackIsRemoving(track.id)">
                                             Removing...
@@ -744,5 +855,78 @@ const resetSearch = (): void => {
                 </div>
             </div>
         </MzLayout>
+
+        <Dialog v-model:open="removalDialogOpen">
+            <DialogContent class="max-w-lg">
+                <DialogHeader class="space-y-3">
+                    <DialogTitle>Remove track from playlist?</DialogTitle>
+                    <DialogDescription>
+                        This detaches the track from the playlist but keeps it
+                        available in your library.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div
+                    v-if="trackPendingRemoval"
+                    class="rounded-md border bg-muted/40 p-4 text-sm shadow-inner"
+                >
+                    <div
+                        class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
+                    >
+                        <div class="space-y-1">
+                            <p class="font-semibold">
+                                {{ trackPendingRemoval.title }}
+                            </p>
+                            <p class="text-muted-foreground">
+                                {{
+                                    getArtistNames(trackPendingRemoval).join(
+                                        ', ',
+                                    ) || '—'
+                                }}
+                            </p>
+                        </div>
+                        <div class="text-xs text-muted-foreground">
+                            ID: {{ trackPendingRemoval.id }}
+                        </div>
+                    </div>
+                </div>
+
+                <DialogFooter
+                    class="flex flex-col gap-2 sm:flex-row sm:justify-end"
+                >
+                    <DialogClose as-child>
+                        <Button
+                            variant="secondary"
+                            class="w-full sm:w-auto"
+                            :disabled="
+                                trackPendingRemoval &&
+                                trackIsRemoving(trackPendingRemoval.id)
+                            "
+                        >
+                            Cancel
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        variant="destructive"
+                        class="w-full sm:w-auto"
+                        :disabled="
+                            trackPendingRemoval &&
+                            trackIsRemoving(trackPendingRemoval.id)
+                        "
+                        @click="confirmRemoval"
+                    >
+                        <span
+                            v-if="
+                                trackPendingRemoval &&
+                                trackIsRemoving(trackPendingRemoval.id)
+                            "
+                        >
+                            Removing...
+                        </span>
+                        <span v-else>Remove track</span>
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

@@ -13,6 +13,7 @@ services:
             - ./vendor/:/var/www/vendor
         networks:
             - app-network
+            - postgres_default
         # depends_on:
         #     - redis
         #     - mailpit
@@ -42,4 +43,6 @@ services:
     #         - network1
 networks:
   app-network:
+    external: true    
+  postgres_default:
     external: true
