@@ -137,18 +137,15 @@ watch(
 
 const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
 const sortLabel = computed(() => {
-    switch (sortOption.value) {
-        case 'rating_desc':
-            return 'Rating (high to low)';
-        case 'rating_asc':
-            return 'Rating (low to high)';
-        case 'artist_asc':
-            return 'Artist (A to Z)';
-        case 'artist_desc':
-            return 'Artist (Z to A)';
-        default:
-            return 'Original order';
-    }
+    const labels: Record<SortOption, string> = {
+        default: 'Original order',
+        rating_desc: 'Rating (high to low)',
+        rating_asc: 'Rating (low to high)',
+        artist_asc: 'Artist (A to Z)',
+        artist_desc: 'Artist (Z to A)',
+    };
+
+    return labels[sortOption.value];
 });
 const getArtistNames = (track: Track): string[] =>
     track.artists?.map(({ name }) => name) ??
