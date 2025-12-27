@@ -26,4 +26,14 @@ class Artist extends Model
     {
         return $this->belongsToMany(Album::class, 'artist_album', 'artist_id', 'album_id');
     }
+
+    /**
+     * Define the searchable fields.
+     */
+    public function toSearchableArray()
+    {
+        return [
+            'name' => $this->title,
+        ];
+    }
 }

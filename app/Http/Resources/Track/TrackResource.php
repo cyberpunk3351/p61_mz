@@ -25,9 +25,6 @@ class TrackResource extends JsonResource
 
         return [
             'id' => $track->id,
-            'artist' => $track->artists
-                ->pluck('name', 'id')
-                ->toArray(),
             'artists' => $track->artists
                 ->map(static function (Artist $artist): array {
                     return [

@@ -19,9 +19,14 @@ class SearchController
             ->paginate(10)
             ->withQueryString();
 
+        dd($request->all());
+
+
         $playlists->getCollection()->transform(
             static fn (Playlist $playlist) => PlaylistsResource::make($playlist)->resolve()
         );
+
+
 
         return Inertia::render('playlist/IndexPage', [
             'playlists' => [

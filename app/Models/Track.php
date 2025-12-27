@@ -3,11 +3,23 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 use Laravel\Scout\Searchable;
+
+/**
+ * @property int $id
+ * @property string $title
+ * @property Carbon|null $release_date
+ * @property int|null $rating
+ * @property string|null $isrc
+ * @property string|null $spotify_id
+ * @property-read Collection<int, Artist> $artists
+ * @property-read Collection<int, Album> $albums
+ */
 
 class Track extends Model
 {

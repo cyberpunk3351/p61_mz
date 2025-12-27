@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Playlist\DetachTrackController;
 use App\Http\Controllers\Playlist\GetController;
+use App\Http\Controllers\Playlist\SearchController;
 use App\Http\Controllers\Playlist\ShowController;
 use Illuminate\Support\Facades\Route;
 
@@ -13,4 +14,5 @@ Route::group([
     Route::get('/', GetController::class)->name('get');
     Route::get('/{playlist}', ShowController::class)->name('show');
     Route::delete('/{playlist}/tracks/{track}', DetachTrackController::class)->name('tracks.detach');
+    Route::post('/search', SearchController::class)->name('search');
 });

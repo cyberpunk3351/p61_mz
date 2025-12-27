@@ -1,8 +1,30 @@
 <script setup lang="ts">
-import DetachTrackController from '@/actions/App/Http/Controllers/Playlist/DetachTrackController';
-import UpdateRatingController from '@/actions/App/Http/Controllers/Track/UpdateRatingController';
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
+import { show as showArtist } from '@/routes/artists';
+import AppLayout from '@/layouts/AppLayout.vue';
+import MzLayout from '@/layouts/mz/Layout.vue';
+import { get, search, show } from '@/routes/playlists';
+import { rating } from '@/routes/tracks';
+import { type BreadcrumbItem } from '@/types';
+import { Head, Link, router } from '@inertiajs/vue3';
+import 'vue-sonner/style.css';
+import { computed, ref, watch } from 'vue';
+import { Copy } from 'lucide-vue-next';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuGroup,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuPortal,
+    DropdownMenuSeparator,
+    DropdownMenuShortcut,
+    DropdownMenuSub,
+    DropdownMenuSubContent,
+    DropdownMenuSubTrigger,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import {
     Table,
     TableBody,
@@ -12,37 +34,20 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuRadioGroup,
-    DropdownMenuRadioItem,
-    DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+    Pagination,
+    PaginationContent,
+    PaginationEllipsis,
+    PaginationItem,
+    PaginationNext,
+    PaginationPrevious,
+} from '@/components/ui/pagination';
 import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from '@/components/ui/dialog';
-
-import AppLayout from '@/layouts/AppLayout.vue';
-import MzLayout from '@/layouts/mz/Layout.vue';
-import { show as showArtist } from '@/routes/artists';
-import { get, show as showPlaylist } from '@/routes/playlists';
-import { type BreadcrumbItem } from '@/types';
-import { Head, Link, WhenVisible, router } from '@inertiajs/vue3';
-import 'vue-sonner/style.css';
-import { computed, ref, watch } from 'vue';
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from '@/components/ui/collapsible';
-import { Info, Star } from 'lucide-vue-next';
-import { Input } from '@/components/ui/input';
+    SelectContent,
+    SelectGroup,
+    SelectLabel,
+    SelectTrigger,
+    SelectValue,
+} from 'reka-ui';
 
 type Album = {
     id: number;
@@ -73,14 +78,8 @@ type TracksPagination = {
     data: Track[];
     current_page: number;
     next_page_url: string | null;
+    per_page: number | null;
 };
-
-type SortOption =
-    | 'default'
-    | 'rating_desc'
-    | 'rating_asc'
-    | 'artist_asc'
-    | 'artist_desc';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -102,333 +101,49 @@ const props = defineProps<{
 }>();
 
 const loadedTracks = ref<Track[]>([...props.tracks.data]);
-const searchTerm = ref<string>('');
-const hoverRatings = ref<Record<number, number | null>>({});
-const updatingTrackId = ref<number | null>(null);
-const removingTrackId = ref<number | null>(null);
-const trackPendingRemoval = ref<Track | null>(null);
-const removalDialogOpen = ref<boolean>(false);
-const selectedArtistInitial = ref<string | null>(null);
-const sortOption = ref<SortOption>('default');
-
-watch(
-    () => props.tracks,
-    (pagination) => {
-        if (!pagination) {
-            loadedTracks.value = [];
-            return;
-        }
-
-        if (pagination.current_page === 1) {
-            loadedTracks.value = [...pagination.data];
-            return;
-        }
-
-        const existingIds = new Set(loadedTracks.value.map(({ id }) => id));
-
-        pagination.data.forEach((track) => {
-            if (!existingIds.has(track.id)) {
-                loadedTracks.value.push(track);
-            }
-        });
-    },
-    { immediate: true, deep: true },
-);
 
 const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
-const sortLabel = computed(() => {
-    const labels: Record<SortOption, string> = {
-        default: 'Original order',
-        rating_desc: 'Rating (high to low)',
-        rating_asc: 'Rating (low to high)',
-        artist_asc: 'Artist (A to Z)',
-        artist_desc: 'Artist (Z to A)',
-    };
 
-    return labels[sortOption.value];
-});
-const getArtistNames = (track: Track): string[] =>
-    track.artists?.map(({ name }) => name) ??
-    Object.values(track.artist ?? {});
-const availableArtistInitials = computed(() => {
-    const initials = new Set<string>();
-
-    loadedTracks.value.forEach((track) => {
-        const name = primaryArtistName(track).trim();
-        const firstLetter = name.charAt(0).toUpperCase();
-
-        if (firstLetter) {
-            initials.add(firstLetter);
-        }
-    });
-
-    return Array.from(initials).sort((first, second) =>
-        first.localeCompare(second),
-    );
-});
-const filteredTracks = computed(() => {
-    const term = searchTerm.value.toLowerCase();
-    const hasSearch = Boolean(term.trim());
-    const hasInitial = Boolean(selectedArtistInitial.value);
-
-    return loadedTracks.value.filter((track) => {
-        const titleMatch = track.title.toLowerCase().includes(term);
-
-        // artist: { 393: "1991", 555: "Noisia" }
-        const artistNames = getArtistNames(track);
-
-        const artistMatch = hasSearch
-            ? artistNames.some((name) => name.toLowerCase().includes(term))
-            : true;
-
-        const initialMatch = hasInitial
-            ? (() => {
-                  const name = primaryArtistName(track).trim();
-                  const firstLetter = name.charAt(0).toUpperCase();
-
-                  return (
-                      firstLetter &&
-                      firstLetter === selectedArtistInitial.value
-                  );
-              })()
-            : true;
-
-        if (hasSearch) {
-            return (titleMatch || artistMatch) && initialMatch;
-        }
-
-        return initialMatch;
-    });
-});
-const primaryArtistName = (track: Track): string => {
-    if (track.artists?.length) {
-        return track.artists[0].name;
-    }
-
-    const names = Object.values(track.artist ?? {});
-
-    return names[0] ?? '';
-};
-const compareByArtistName = (first: Track, second: Track): number => {
-    const firstName = primaryArtistName(first).toLowerCase();
-    const secondName = primaryArtistName(second).toLowerCase();
-
-    if (!firstName && !secondName) {
-        return 0;
-    }
-
-    if (!firstName) {
-        return 1;
-    }
-
-    if (!secondName) {
-        return -1;
-    }
-
-    return firstName.localeCompare(secondName);
-};
-const sortedTracks = computed(() => {
-    const tracks = [...filteredTracks.value];
-
-    switch (sortOption.value) {
-        case 'rating_desc':
-            return tracks.sort((first, second) => {
-                if (first.rating === null && second.rating === null) {
-                    return 0;
-                }
-
-                if (first.rating === null) {
-                    return 1;
-                }
-
-                if (second.rating === null) {
-                    return -1;
-                }
-
-                return second.rating - first.rating;
-            });
-        case 'rating_asc':
-            return tracks.sort((first, second) => {
-                if (first.rating === null && second.rating === null) {
-                    return 0;
-                }
-
-                if (first.rating === null) {
-                    return 1;
-                }
-
-                if (second.rating === null) {
-                    return -1;
-                }
-
-                return first.rating - second.rating;
-            });
-        case 'artist_asc':
-            return tracks.sort((first, second) =>
-                compareByArtistName(first, second),
-            );
-        case 'artist_desc':
-            return tracks.sort((first, second) =>
-                compareByArtistName(second, first),
-            );
-        default:
-            return tracks;
-    }
-});
-
-const loadMoreParams = computed(() => {
-    if (!props.tracks?.next_page_url) {
-        return null;
-    }
-
-    return {
-        data: {
-            page: props.tracks.current_page + 1,
-        },
-        only: ['tracks'],
-        preserveScroll: true,
-        preserveState: true,
-        replace: true,
-    };
-});
-
-const setHoverRating = (trackId: number, value: number | null): void => {
-    hoverRatings.value = {
-        ...hoverRatings.value,
-        [trackId]: value,
-    };
-};
-
-const starIsActive = (trackId: number, starValue: number): boolean => {
-    const hoveredValue = hoverRatings.value[trackId];
-
-    if (hoveredValue !== undefined && hoveredValue !== null) {
-        return starValue <= hoveredValue;
-    }
-
-    const currentTrack = loadedTracks.value.find(({ id }) => id === trackId);
-
-    if (currentTrack?.rating === null) {
-        return false;
-    }
-
-    return starValue <= currentTrack.rating;
-};
-
-const ratingIsUpdating = (trackId: number): boolean =>
-    updatingTrackId.value === trackId;
-
-const trackIsRemoving = (trackId: number): boolean =>
-    removingTrackId.value === trackId;
-
-watch(removalDialogOpen, (isOpen) => {
-    if (!isOpen) {
-        trackPendingRemoval.value = null;
-    }
-});
-
-const openRemovalDialog = (track: Track): void => {
-    trackPendingRemoval.value = track;
-    removalDialogOpen.value = true;
-};
-
-const setRating = (track: Track, rating: number): void => {
-    if (ratingIsUpdating(track.id)) {
-        return;
-    }
-
-    const previousRating = track.rating;
-
-    track.rating = rating;
-    updatingTrackId.value = track.id;
-
-    router.patch(
-        UpdateRatingController.url({ track: track.id }),
-        { rating },
-        {
-            preserveScroll: true,
-            preserveState: true,
-            onError: () => {
-                track.rating = previousRating;
+function handlePageChange(newPage: number) {
+    router.get(
+        show.url(props.playlist.data.id, {
+            query: {
+                page: newPage,
+                limit: props.tracks.per_page,
             },
-            onFinish: () => {
-                updatingTrackId.value = null;
-                setHoverRating(track.id, null);
-            },
-        },
-    );
-};
-
-const removeTrackFromPlaylist = (track: Track): void => {
-    if (trackIsRemoving(track.id)) {
-        return;
-    }
-
-    removingTrackId.value = track.id;
-
-    router.delete(
-        DetachTrackController.url({
-            playlist: props.playlist.data.id,
-            track: track.id,
         }),
+        {},
         {
-            only: ['tracks'],
             preserveScroll: true,
             preserveState: true,
-            onSuccess: () => {
-                loadedTracks.value = loadedTracks.value.filter(
-                    ({ id }) => id !== track.id,
-                );
-                removalDialogOpen.value = false;
-                trackPendingRemoval.value = null;
-            },
-            onFinish: () => {
-                removingTrackId.value = null;
-            },
+            replace: true,
         },
     );
-};
+}
 
-const confirmRemoval = (): void => {
-    if (!trackPendingRemoval.value) {
-        return;
-    }
+function saveRating(rat: number, id: number) {
+    console.log(id);
+    router.patch(
+        rating.url(id),
+        { rating: rat },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        },
+    );
+}
 
-    removeTrackFromPlaylist(trackPendingRemoval.value);
-};
-
-const copyToClipboard = (track: Track): void => {
-    const artistNames = getArtistNames(track);
-    const textToCopy = `${artistNames.join(', ')} - ${track.title}`;
-
-    if (navigator?.clipboard?.writeText) {
-        void navigator.clipboard.writeText(textToCopy);
-        return;
-    }
-
+const copyToClipboard = (id) => {
+    const artist = document.getElementById('artist-' + id).innerText.trim();
+    const song = document.getElementById('song-' + id).innerText.trim();
+    let textToCopy = artist + ' - ' + song;
     const textarea = document.createElement('textarea');
     textarea.value = textToCopy;
     document.body.appendChild(textarea);
     textarea.select();
     document.execCommand('copy');
     document.body.removeChild(textarea);
-};
-
-const resetSearch = (): void => {
-    searchTerm.value = '';
-    loadedTracks.value = [];
-    selectedArtistInitial.value = null;
-
-    router.get(
-        showPlaylist.url(props.playlist.data.id),
-        {},
-        {
-            only: ['tracks'],
-            preserveScroll: true,
-            preserveState: true,
-            replace: true,
-        },
-    );
 };
 </script>
 
@@ -441,489 +156,199 @@ const resetSearch = (): void => {
                     :title="props.playlist.data.title"
                     description="Track list"
                 />
-                <div
-                    class="grid grid-cols-1 gap-2 rounded-lg border bg-card p-4 text-sm"
-                >
-                    <div class="flex items-center justify-between">
-                        <span class="text-muted-foreground">ID</span>
-                        <span class="font-medium">{{
-                            props.playlist.data.id
-                        }}</span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-muted-foreground">Source</span>
-                        <span class="font-medium">
-                            {{ props.playlist.data.source ?? '—' }}
-                        </span>
-                    </div>
-                    <div class="flex items-center justify-between">
-                        <span class="text-muted-foreground">Created</span>
-                        <span class="font-medium">{{
-                            props.playlist.data.date
-                        }}</span>
-                    </div>
-                </div>
-                <div class="flex flex-col gap-4 rounded-lg border bg-card p-4">
-                    <div
-                        class="flex flex-col gap-3 sm:flex-row sm:items-center"
-                    >
-                        <label
-                            class="text-sm font-medium text-muted-foreground sm:w-40"
-                        >
-                            Search tracks
-                        </label>
-                        <div class="flex w-full items-center gap-2">
-                            <Input
-                                v-model="searchTerm"
-                                name="search"
-                                placeholder="Filter by title or artist"
-                                class="w-full"
-                                @keydown.escape.prevent="resetSearch"
-                            />
-                            <Button
-                                variant="ghost"
-                                type="button"
-                                @click="resetSearch"
-                            >
-                                Reset
-                            </Button>
-                        </div>
-                    </div>
-                    <div
-                        class="flex flex-col gap-3 sm:flex-row sm:items-center"
-                    >
-                        <label
-                            class="text-sm font-medium text-muted-foreground sm:w-40"
-                        >
-                            Sort tracks
-                        </label>
-                        <div class="flex w-full items-center gap-2">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger :as-child="true">
-                                    <Button
-                                        variant="outline"
-                                        class="w-full justify-between sm:w-60"
-                                        type="button"
-                                    >
-                                        <span>Sort: {{ sortLabel }}</span>
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" class="w-56">
-                                    <DropdownMenuRadioGroup
-                                        v-model="sortOption"
-                                    >
-                                        <DropdownMenuRadioItem value="default">
-                                            Original order
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value="rating_desc"
-                                        >
-                                            Rating (high to low)
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value="rating_asc"
-                                        >
-                                            Rating (low to high)
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value="artist_asc"
-                                        >
-                                            Artist (A to Z)
-                                        </DropdownMenuRadioItem>
-                                        <DropdownMenuRadioItem
-                                            value="artist_desc"
-                                        >
-                                            Artist (Z to A)
-                                        </DropdownMenuRadioItem>
-                                    </DropdownMenuRadioGroup>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    </div>
-                    <div
-                        class="flex flex-col gap-3 sm:flex-row sm:items-center"
-                    >
-                        <label
-                            class="text-sm font-medium text-muted-foreground sm:w-40"
-                        >
-                            Artist initial
-                        </label>
-                        <div
-                            class="flex flex-wrap gap-2"
-                            role="group"
-                            aria-label="Filter tracks by artist initial"
-                        >
-                            <Button
-                                type="button"
-                                size="sm"
-                                class="min-w-[52px]"
-                                :aria-pressed="selectedArtistInitial === null"
-                                :variant="
-                                    selectedArtistInitial === null
-                                        ? 'secondary'
-                                        : 'outline'
-                                "
-                                @click="selectedArtistInitial = null"
-                            >
-                                All
-                            </Button>
-                            <Button
-                                v-for="initial in availableArtistInitials"
-                                :key="initial"
-                                type="button"
-                                size="sm"
-                                class="min-w-[52px]"
-                                :aria-pressed="selectedArtistInitial === initial"
-                                :variant="
-                                    selectedArtistInitial === initial
-                                        ? 'secondary'
-                                        : 'outline'
-                                "
-                                @click="selectedArtistInitial = initial"
-                            >
-                                {{ initial }}
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead class="text-xs">Track</TableHead>
-                            <TableHead class="text-right text-xs">
-                                Actions
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        <TableRow v-for="track in sortedTracks" :key="track.id">
-                            <!--                            <pre>-->
-                            <!--                                {{ track }}-->
-                            <!--                            </pre>-->
-                            <TableCell>
-                                <Collapsible
-                                    class="flex w-full flex-col gap-3 sm:w-[420px]"
-                                >
-                                    <div
-                                        class="flex items-start justify-between gap-4 px-4 sm:items-center"
-                                    >
-                                        <div class="space-y-3">
-                                            <div>
-                                                <p
-                                                    :id="'song-' + track.id"
-                                                    class="font-bold"
-                                                >
-                                                    {{ track.title }}
-                                                </p>
-                                            </div>
-                                            <div class="mb-1">
-                                                <p
-                                                    :id="'artist-' + track.id"
-                                                    class="flex flex-wrap items-center gap-1 text-gray-300"
-                                                >
-                                                    <template
-                                                        v-if="
-                                                            track.artists
-                                                                ?.length
-                                                        "
-                                                    >
-                                                        <template
-                                                            v-for="(
-                                                                artist, index
-                                                            ) in track.artists"
-                                                            :key="artist.id"
-                                                        >
-                                                            <Link
-                                                                :href="
-                                                                    showArtist.url(
-                                                                        artist.id,
-                                                                    )
-                                                                "
-                                                                class="text-primary transition hover:text-primary/80 hover:underline"
-                                                            >
-                                                                {{
-                                                                    artist.name
-                                                                }}
-                                                            </Link>
-                                                            <span
-                                                                v-if="
-                                                                    index <
-                                                                    track
-                                                                        .artists
-                                                                        .length -
-                                                                        1
-                                                                "
-                                                                class="text-muted-foreground"
-                                                            >
-                                                                ,
-                                                            </span>
-                                                        </template>
-                                                    </template>
-                                                    <span
-                                                        v-else
-                                                        class="text-muted-foreground"
-                                                        >—</span
-                                                    >
-                                                </p>
-                                            </div>
+            </div>
 
-                                            <div
-                                                class="flex items-center gap-2 pt-2"
-                                            >
-                                                <div
-                                                    class="flex items-center gap-1"
-                                                >
-                                                    <button
-                                                        v-for="value in 5"
-                                                        :key="value"
-                                                        type="button"
-                                                        class="p-1"
-                                                        :disabled="
-                                                            ratingIsUpdating(
-                                                                track.id,
-                                                            )
-                                                        "
-                                                        :aria-label="`Set rating to ${value}`"
-                                                        @mouseover="
-                                                            setHoverRating(
-                                                                track.id,
-                                                                value,
-                                                            )
-                                                        "
-                                                        @focus="
-                                                            setHoverRating(
-                                                                track.id,
-                                                                value,
-                                                            )
-                                                        "
-                                                        @mouseleave="
-                                                            setHoverRating(
-                                                                track.id,
-                                                                null,
-                                                            )
-                                                        "
-                                                        @blur="
-                                                            setHoverRating(
-                                                                track.id,
-                                                                null,
-                                                            )
-                                                        "
-                                                        @click="
-                                                            setRating(
-                                                                track,
-                                                                value,
-                                                            )
-                                                        "
-                                                    >
-                                                        <Star
-                                                            :class="[
-                                                                'size-5 transition-colors',
-                                                                ratingIsUpdating(
-                                                                    track.id,
-                                                                )
-                                                                    ? 'opacity-50'
-                                                                    : '',
-                                                                starIsActive(
-                                                                    track.id,
-                                                                    value,
-                                                                )
-                                                                    ? 'fill-amber-400 text-amber-400'
-                                                                    : 'text-muted-foreground',
-                                                            ]"
-                                                        />
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <CollapsibleTrigger>
-                                            <Button
-                                                variant="ghost"
-                                                size="icon"
-                                                class="size-8"
-                                            >
-                                                <Info />
-                                                <span class="sr-only"
-                                                    >Toggle</span
-                                                >
-                                            </Button>
-                                        </CollapsibleTrigger>
-                                    </div>
+            <div class="flex flex-col justify-between">
+                <div class="mx-auto">
+                    <Pagination
+                        v-slot="{ page }"
+                        :items-per-page="tracks.per_page"
+                        :total="tracks.total"
+                        :default-page="1"
+                        @update:page="handlePageChange"
+                    >
+                        <PaginationContent v-slot="{ items }">
+                            <PaginationPrevious />
 
-                                    <CollapsibleContent>
-                                        <div class="px-4">
-                                            <p
-                                                class="text-xs font-bold uppercase"
-                                            >
-                                                Artist:
-                                            </p>
-                                            <template
-                                                v-if="track.artists?.length"
-                                            >
-                                                <div
-                                                    v-for="artist in track.artists"
-                                                    :key="artist.id"
-                                                    class="px-4 text-xs"
-                                                >
-                                                    <Link
-                                                        :href="
-                                                            showArtist.url(
-                                                                artist.id,
-                                                            )
-                                                        "
-                                                        class="text-primary transition hover:text-primary/80 hover:underline"
-                                                    >
-                                                        {{ artist.name }}
-                                                    </Link>
-                                                </div>
-                                            </template>
-                                            <div
-                                                v-else
-                                                class="px-4 text-xs text-muted-foreground"
-                                            >
-                                                —
-                                            </div>
-                                            <p
-                                                class="pt-1 text-xs font-bold uppercase"
-                                            >
-                                                Date:
-                                            </p>
-                                            <div class="px-4 text-xs">
-                                                {{ track.release_date ?? '—' }}
-                                            </div>
-                                            <p
-                                                class="pt-1 text-xs font-bold uppercase"
-                                            >
-                                                Album:
-                                            </p>
-                                            <div class="px-4 text-xs">
-                                                {{
-                                                    track.albums?.data?.[0]
-                                                        ?.title ?? '—'
-                                                }}
-                                            </div>
-                                        </div>
-                                    </CollapsibleContent>
-                                </Collapsible>
-                            </TableCell>
-                            <TableCell class="text-right">
-                                <div
-                                    class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end"
-                                >
-                                    <Button
-                                        id="copyToClipboard"
-                                        variant="outline"
-                                        type="button"
-                                        class="w-full sm:w-auto"
-                                        @click="copyToClipboard(track)"
-                                    >
-                                        Copy
-                                    </Button>
-                                    <Button
-                                        variant="destructive"
-                                        type="button"
-                                        class="w-full sm:w-auto"
-                                        :disabled="trackIsRemoving(track.id)"
-                                        @click="openRemovalDialog(track)"
-                                    >
-                                        <span v-if="trackIsRemoving(track.id)">
-                                            Removing...
-                                        </span>
-                                        <span v-else>Remove</span>
-                                    </Button>
-                                </div>
-                            </TableCell>
-                        </TableRow>
-                        <TableRow v-if="tracksAreEmpty">
-                            <TableCell
-                                colspan="2"
-                                class="text-center text-muted-foreground"
+                            <template
+                                v-for="(item, index) in items"
+                                :key="index"
                             >
-                                No tracks yet.
-                            </TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-                <div v-if="loadMoreParams" class="h-1 w-full">
-                    <WhenVisible
-                        :key="props.tracks.current_page"
-                        :always="true"
-                        :params="loadMoreParams"
-                    />
+                                <PaginationItem
+                                    v-if="item.type === 'page'"
+                                    :value="item.value"
+                                    :is-active="item.value === page"
+                                >
+                                    {{ item.value }}
+                                </PaginationItem>
+                            </template>
+
+                            <PaginationEllipsis :index="10" />
+
+                            <PaginationNext />
+                        </PaginationContent>
+                    </Pagination>
                 </div>
             </div>
+
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead class="w-[100px]"> ID </TableHead>
+
+                        <TableHead> Artists </TableHead>
+
+                        <TableHead> Title </TableHead>
+
+                        <TableHead> Button </TableHead>
+
+                        <TableHead> Action </TableHead>
+                    </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                    <TableRow
+                        v-for="(item, index) in tracks.data"
+                        :key="item.id"
+                    >
+                        <TableCell class="font-medium">
+                            {{ item.id }}
+                        </TableCell>
+
+                        <TableCell
+                            :id="'artist-' + item.id"
+                            class="max-w-[150px] truncate"
+                        >
+                            <div
+                                v-for="artist in item.artists"
+                                :key="artist.id"
+                            >
+                                <Link
+                                    :href="showArtist.url(artist.id)"
+                                    class="text-primary transition hover:text-primary/80 hover:underline"
+                                >
+                                    {{ artist.name }}
+                                </Link>
+                            </div>
+                        </TableCell>
+
+                        <TableCell
+                            :id="'song-' + item.id"
+                            class="max-w-[200px] truncate"
+                        >
+                            <p>{{ item.title }}</p>
+                            <span class="text-xs text-zinc-500">
+                                <div class="flex items-center">
+                                    <div v-for="rat in 5" :key="rat">
+                                        <svg
+                                            @click="saveRating(rat, item.id)"
+                                            class="ms-1 h-4 w-4"
+                                            :class="[
+                                                (item.rating ?? 0) >= rat
+                                                    ? 'text-yellow-300'
+                                                    : 'text-gray-500',
+                                            ]"
+                                            aria-hidden="true"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="currentColor"
+                                            viewBox="0 0 22 20"
+                                        >
+                                            <path
+                                                d="M20.924 7.625a1.523 1.523 0 0 0-1.238-1.044l-5.051-.734-2.259-4.577a1.534 1.534 0 0 0-2.752 0L7.365 5.847l-5.051.734A1.535 1.535 0 0 0 1.463 9.2l3.656 3.563-.863 5.031a1.532 1.532 0 0 0 2.226 1.616L11 17.033l4.518 2.375a1.534 1.534 0 0 0 2.226-1.617l-.863-5.03L20.537 9.2a1.523 1.523 0 0 0 .387-1.575Z"
+                                            />
+                                        </svg>
+                                    </div>
+                                </div>
+                            </span>
+                        </TableCell>
+
+                        <TableCell>
+                            <Button
+                                id="copyToClipboard"
+                                @click="copyToClipboard(item.id)"
+                                variant="outline"
+                                class="ml-auto"
+                            >
+                                <Copy />
+                            </Button>
+                        </TableCell>
+
+                        <TableCell>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger as-child>
+                                    <Button variant="outline"> Open </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent class="w-56" align="start">
+                                    <DropdownMenuLabel>Link</DropdownMenuLabel>
+                                    <DropdownMenuGroup>
+                                        <DropdownMenuItem>
+                                            <a
+                                                target="_blank"
+                                                :href="
+                                                    'https://www.youtube.com/results?search_query=' +
+                                                    item.artists[0].name +
+                                                    '+-+' +
+                                                    item.title
+                                                "
+                                            >
+                                                Youtube
+                                            </a>
+                                            <DropdownMenuShortcut
+                                                ><svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    x="0px"
+                                                    y="0px"
+                                                    width="100"
+                                                    height="100"
+                                                    viewBox="0 0 48 48"
+                                                >
+                                                    <path
+                                                        fill="#FF3D00"
+                                                        d="M43.2,33.9c-0.4,2.1-2.1,3.7-4.2,4c-3.3,0.5-8.8,1.1-15,1.1c-6.1,0-11.6-0.6-15-1.1c-2.1-0.3-3.8-1.9-4.2-4C4.4,31.6,4,28.2,4,24c0-4.2,0.4-7.6,0.8-9.9c0.4-2.1,2.1-3.7,4.2-4C12.3,9.6,17.8,9,24,9c6.2,0,11.6,0.6,15,1.1c2.1,0.3,3.8,1.9,4.2,4c0.4,2.3,0.9,5.7,0.9,9.9C44,28.2,43.6,31.6,43.2,33.9z"
+                                                    ></path>
+                                                    <path
+                                                        fill="#FFF"
+                                                        d="M20 31L20 17 32 24z"
+                                                    ></path></svg
+                                            ></DropdownMenuShortcut>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem>
+                                            <a
+                                                target="_blank"
+                                                :href="
+                                                    'https://vk.com/audios6275562?q=' +
+                                                    item.artists[0].name +
+                                                    ' - ' +
+                                                    item.title
+                                                "
+                                                >Vk</a
+                                            >
+                                            <DropdownMenuShortcut
+                                                ><svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    x="0px"
+                                                    y="0px"
+                                                    width="100"
+                                                    height="100"
+                                                    viewBox="0 0 48 48"
+                                                >
+                                                    <path
+                                                        fill="#1976d2"
+                                                        d="M42,37c0,2.762-2.238,5-5,5H11c-2.761,0-5-2.238-5-5V11c0-2.762,2.239-5,5-5h26c2.762,0,5,2.238,5,5 V37z"
+                                                    ></path>
+                                                    <path
+                                                        fill="#fff"
+                                                        d="M35.937,18.041c0.046-0.151,0.068-0.291,0.062-0.416C35.984,17.263,35.735,17,35.149,17h-2.618 c-0.661,0-0.966,0.4-1.144,0.801c0,0-1.632,3.359-3.513,5.574c-0.61,0.641-0.92,0.625-1.25,0.625C26.447,24,26,23.786,26,23.199 v-5.185C26,17.32,25.827,17,25.268,17h-4.649C20.212,17,20,17.32,20,17.641c0,0.667,0.898,0.827,1,2.696v3.623 C21,24.84,20.847,25,20.517,25c-0.89,0-2.642-3-3.815-6.932C16.448,17.294,16.194,17,15.533,17h-2.643 C12.127,17,12,17.374,12,17.774c0,0.721,0.6,4.619,3.875,9.101C18.25,30.125,21.379,32,24.149,32c1.678,0,1.85-0.427,1.85-1.094 v-2.972C26,27.133,26.183,27,26.717,27c0.381,0,1.158,0.25,2.658,2c1.73,2.018,2.044,3,3.036,3h2.618 c0.608,0,0.957-0.255,0.971-0.75c0.003-0.126-0.015-0.267-0.056-0.424c-0.194-0.576-1.084-1.984-2.194-3.326 c-0.615-0.743-1.222-1.479-1.501-1.879C32.062,25.36,31.991,25.176,32,25c0.009-0.185,0.105-0.361,0.249-0.607 C32.223,24.393,35.607,19.642,35.937,18.041z"
+                                                    ></path></svg
+                                            ></DropdownMenuShortcut>
+                                        </DropdownMenuItem>
+                                    </DropdownMenuGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
         </MzLayout>
-
-        <Dialog v-model:open="removalDialogOpen">
-            <DialogContent class="max-w-lg">
-                <DialogHeader class="space-y-3">
-                    <DialogTitle>Remove track from playlist?</DialogTitle>
-                    <DialogDescription>
-                        This detaches the track from the playlist but keeps it
-                        available in your library.
-                    </DialogDescription>
-                </DialogHeader>
-
-                <div
-                    v-if="trackPendingRemoval"
-                    class="rounded-md border bg-muted/40 p-4 text-sm shadow-inner"
-                >
-                    <div
-                        class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3"
-                    >
-                        <div class="space-y-1">
-                            <p class="font-semibold">
-                                {{ trackPendingRemoval.title }}
-                            </p>
-                            <p class="text-muted-foreground">
-                                {{
-                                    getArtistNames(trackPendingRemoval).join(
-                                        ', ',
-                                    ) || '—'
-                                }}
-                            </p>
-                        </div>
-                        <div class="text-xs text-muted-foreground">
-                            ID: {{ trackPendingRemoval.id }}
-                        </div>
-                    </div>
-                </div>
-
-                <DialogFooter
-                    class="flex flex-col gap-2 sm:flex-row sm:justify-end"
-                >
-                    <DialogClose as-child>
-                        <Button
-                            variant="secondary"
-                            class="w-full sm:w-auto"
-                            :disabled="
-                                trackPendingRemoval &&
-                                trackIsRemoving(trackPendingRemoval.id)
-                            "
-                        >
-                            Cancel
-                        </Button>
-                    </DialogClose>
-                    <Button
-                        variant="destructive"
-                        class="w-full sm:w-auto"
-                        :disabled="
-                            trackPendingRemoval &&
-                            trackIsRemoving(trackPendingRemoval.id)
-                        "
-                        @click="confirmRemoval"
-                    >
-                        <span
-                            v-if="
-                                trackPendingRemoval &&
-                                trackIsRemoving(trackPendingRemoval.id)
-                            "
-                        >
-                            Removing...
-                        </span>
-                        <span v-else>Remove track</span>
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
     </AppLayout>
 </template>
