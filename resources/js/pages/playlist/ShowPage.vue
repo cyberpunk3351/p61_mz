@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { show as showArtist } from '@/routes/artists';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { get, search, show } from '@/routes/playlists';
+import { get, show } from '@/routes/playlists';
 import { rating } from '@/routes/tracks';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
+import { toast } from 'vue-sonner';
 import 'vue-sonner/style.css';
-import { computed, ref, watch } from 'vue';
+import { computed, ref } from 'vue';
 import { Copy } from 'lucide-vue-next';
 import {
     DropdownMenu,
@@ -17,12 +18,7 @@ import {
     DropdownMenuGroup,
     DropdownMenuItem,
     DropdownMenuLabel,
-    DropdownMenuPortal,
-    DropdownMenuSeparator,
     DropdownMenuShortcut,
-    DropdownMenuSub,
-    DropdownMenuSubContent,
-    DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -41,13 +37,7 @@ import {
     PaginationNext,
     PaginationPrevious,
 } from '@/components/ui/pagination';
-import {
-    SelectContent,
-    SelectGroup,
-    SelectLabel,
-    SelectTrigger,
-    SelectValue,
-} from 'reka-ui';
+import { Toaster } from '@/components/ui/sonner';
 
 type Album = {
     id: number;
@@ -134,15 +124,46 @@ function saveRating(rat: number, id: number) {
     );
 }
 
-const copyToClipboard = (id) => {
-    const artist = document.getElementById('artist-' + id).innerText.trim();
-    const song = document.getElementById('song-' + id).innerText.trim();
-    let textToCopy = artist + ' - ' + song;
+const copyToClipboard = (track: Track) => {
+    const artist = track.artists.map((a) => a.name).join(', ');
+    const textToCopy = `${artist} - ${track.title}`;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard
+            .writeText(textToCopy)
+            .then(() => {
+                toast.success('Copied to clipboard');
+            })
+            .catch(() => {
+                fallbackCopy(textToCopy);
+            });
+    } else {
+        fallbackCopy(textToCopy);
+    }
+};
+
+const fallbackCopy = (text: string) => {
     const textarea = document.createElement('textarea');
-    textarea.value = textToCopy;
+    textarea.value = text;
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.position = 'fixed';
     document.body.appendChild(textarea);
+    textarea.focus();
     textarea.select();
-    document.execCommand('copy');
+
+    try {
+        const successful = document.execCommand('copy');
+        if (successful) {
+            toast.success('Copied to clipboard');
+        } else {
+            toast.error('Failed to copy');
+        }
+    } catch (err) {
+        console.error('Fallback copy failed', err);
+        toast.error('Failed to copy');
+    }
+
     document.body.removeChild(textarea);
 };
 </script>
@@ -200,7 +221,7 @@ const copyToClipboard = (id) => {
 
                         <TableHead> Title </TableHead>
 
-                        <TableHead> Button </TableHead>
+                        <TableHead> Copy </TableHead>
 
                         <TableHead> Action </TableHead>
                     </TableRow>
@@ -215,10 +236,7 @@ const copyToClipboard = (id) => {
                             {{ item.id }}
                         </TableCell>
 
-                        <TableCell
-                            :id="'artist-' + item.id"
-                            class="max-w-[150px] truncate"
-                        >
+                        <TableCell class="max-w-[150px] truncate">
                             <div
                                 v-for="artist in item.artists"
                                 :key="artist.id"
@@ -232,10 +250,7 @@ const copyToClipboard = (id) => {
                             </div>
                         </TableCell>
 
-                        <TableCell
-                            :id="'song-' + item.id"
-                            class="max-w-[200px] truncate"
-                        >
+                        <TableCell class="max-w-[200px] truncate">
                             <p>{{ item.title }}</p>
                             <span class="text-xs text-zinc-500">
                                 <div class="flex items-center">
@@ -263,9 +278,10 @@ const copyToClipboard = (id) => {
                         </TableCell>
 
                         <TableCell>
+                            <Toaster />
                             <Button
                                 id="copyToClipboard"
-                                @click="copyToClipboard(item.id)"
+                                @click="copyToClipboard(item)"
                                 variant="outline"
                                 class="ml-auto"
                             >
