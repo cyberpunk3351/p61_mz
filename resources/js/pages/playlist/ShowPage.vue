@@ -4,14 +4,16 @@ import { Button } from '@/components/ui/button';
 import { show as showArtist } from '@/routes/artists';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { get, show } from '@/routes/playlists';
+import { get, search, show } from '@/routes/playlists';
 import { rating } from '@/routes/tracks';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { toast } from 'vue-sonner';
 import 'vue-sonner/style.css';
 import { computed, ref } from 'vue';
-import { Copy } from 'lucide-vue-next';
+import { Copy, Search, X } from 'lucide-vue-next';
+const searchQuery = ref('');
+
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -38,6 +40,7 @@ import {
     PaginationPrevious,
 } from '@/components/ui/pagination';
 import { Toaster } from '@/components/ui/sonner';
+import { Input } from '@/components/ui/input';
 
 type Album = {
     id: number;
@@ -112,7 +115,6 @@ function handlePageChange(newPage: number) {
 }
 
 function saveRating(rat: number, id: number) {
-    console.log(id);
     router.patch(
         rating.url(id),
         { rating: rat },
@@ -124,6 +126,31 @@ function saveRating(rat: number, id: number) {
     );
 }
 
+const searchSaves = async (id: number, query: string, limit: number) => {
+    if (!query) {
+        return handlePageChange(1);
+    }
+
+    try {
+        console.log('search');
+        router.get(
+            search.url(props.playlist.data.id, {}),
+            { query: query },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                replace: true,
+            },
+        );
+    } catch (error) {
+        console.error('Error searching saves:', error);
+    }
+};
+
+function handleClick() {
+    handlePageChange(1);
+    searchQuery.value = '';
+}
 const copyToClipboard = (track: Track) => {
     const artist = track.artists.map((a) => a.name).join(', ');
     const textToCopy = `${artist} - ${track.title}`;
@@ -209,6 +236,30 @@ const fallbackCopy = (text: string) => {
                             <PaginationNext />
                         </PaginationContent>
                     </Pagination>
+                </div>
+            </div>
+
+            <div>
+                <div class="relative flex w-full max-w-sm items-center">
+                    <Input
+                        v-model="searchQuery"
+                        @input="searchSaves(playlist.id, searchQuery, perPage)"
+                        id="search"
+                        type="text"
+                        placeholder="Search..."
+                        class="pl-10"
+                    />
+                    <span
+                        class="absolute inset-y-0 start-0 flex items-center justify-center px-2"
+                    >
+                        <Search class="size-6 text-muted-foreground" />
+                    </span>
+                    <div class="pl-4">
+                        <X
+                            class="size-6 cursor-pointer text-muted-foreground hover:text-zinc-100"
+                            @click="handleClick"
+                        />
+                    </div>
                 </div>
             </div>
 

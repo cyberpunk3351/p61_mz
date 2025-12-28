@@ -65,14 +65,15 @@ const showToast = () => {
                     title="Информация"
                     description="Обновить данные"
                 />
-                <Toaster />
                 <Form
                     :action="StoreController.url()"
                     method="post"
                     enctype="multipart/form-data"
                     class="space-y-6"
-                    v-slot="{ errors, processing }"
+                    v-slot="{ errors, processing, recentlySuccessful }"
                 >
+                    <Toaster v-show="recentlySuccessful" />
+
                     <div class="space-y-2">
                         <Label for="file">File</Label>
                         <Input
@@ -101,20 +102,19 @@ const showToast = () => {
                             @click="showToast"
                             >Save</Button
                         >
-
-<!--                        <Transition-->
-<!--                            enter-active-class="transition ease-in-out"-->
-<!--                            enter-from-class="opacity-0"-->
-<!--                            leave-active-class="transition ease-in-out"-->
-<!--                            leave-to-class="opacity-0"-->
-<!--                        >-->
-<!--                            <p-->
-<!--                                v-show="recentlySuccessful"-->
-<!--                                class="text-sm text-neutral-600"-->
-<!--                            >-->
-<!--                                Saved-->
-<!--                            </p>-->
-<!--                        </Transition>-->
+                        <Transition
+                            enter-active-class="transition ease-in-out"
+                            enter-from-class="opacity-0"
+                            leave-active-class="transition ease-in-out"
+                            leave-to-class="opacity-0"
+                        >
+                            <p
+                                v-show="recentlySuccessful"
+                                class="text-sm text-neutral-600"
+                            >
+                                Saved.
+                            </p>
+                        </Transition>
                     </div>
                 </Form>
             </div>

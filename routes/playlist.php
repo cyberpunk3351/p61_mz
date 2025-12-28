@@ -14,5 +14,5 @@ Route::group([
     Route::get('/', GetController::class)->name('get');
     Route::get('/{playlist}', ShowController::class)->name('show');
     Route::delete('/{playlist}/tracks/{track}', DetachTrackController::class)->name('tracks.detach');
-    Route::post('/search', SearchController::class)->name('search');
+    Route::get('/search/{playlist}/track', SearchController::class)->name('search');
 });

@@ -29,6 +29,7 @@ class StoreController extends Controller
         }
 
         $fileAction = $fileAction($uploadedFile, 'playlist');
+
         $storePlaylist = ($this->storePlaylist)($uploadedFile->getClientOriginalName(), $fileAction['hash'], 'playlist');
         $csvAction($fileAction, $storePlaylist);
 
