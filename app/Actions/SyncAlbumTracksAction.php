@@ -13,10 +13,8 @@ class SyncAlbumTracksAction
     {
         try {
             $album->tracks()->save($track);
-            dump(true);
             return true;
         } catch (Exception $e) {
-            dump(false);
             return false;
         }
     }

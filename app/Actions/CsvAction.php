@@ -19,29 +19,21 @@ readonly class CsvAction
         private SyncArtistsAlbumsAction $syncArtistsAlbums,
     ) {}
 
-    public function __invoke(array $data, Playlist $playlist): array
+    public function __invoke(array $data, Playlist $playlist): void
     {
-        return $this->importFromPath($data['path'], $playlist);
+        $this->importFromPath($data['path'], $playlist);
     }
 
-    private function importFromPath(string $absolutePath, Playlist $playlist): array
+    private function importFromPath(string $absolutePath, Playlist $playlist): void
     {
         if (! file_exists($absolutePath)) {
-            return [
-                'imported'   => 0,
-                'skipped'    => 0,
-                'total_rows' => 0,
-            ];
+            return;
         }
 
         $handle = fopen($absolutePath, 'rb');
 
         if ($handle === false) {
-            return [
-                'imported'   => 0,
-                'skipped'    => 0,
-                'total_rows' => 0,
-            ];
+            return;
         }
 
         $sample    = fgets($handle) ?: '';
@@ -51,9 +43,6 @@ readonly class CsvAction
 
         $headerKeys   = [];
         $headerLabels = [];
-        $totalRows    = 0;
-        $imported     = 0;
-        $skipped      = 0;
 
         while (($data = fgetcsv($handle, 0, $delimiter)) !== false) {
             $data = array_map(
@@ -71,8 +60,6 @@ readonly class CsvAction
                 continue;
             }
 
-            $totalRows++;
-
             $row = $this->mapRow($headerKeys, $data);
 
             $artists = ($this->storeArtistFromRow)($row);
@@ -80,7 +67,6 @@ readonly class CsvAction
             $album = ($this->storeAlbum)($row);
 
             if ($track === null) {
-                $skipped++;
                 continue;
             }
 
@@ -97,17 +83,9 @@ readonly class CsvAction
                     ($this->syncArtistsAlbums)($artistModels, $album);
                 }
             }
-
-            $imported++;
         }
 
         fclose($handle);
-
-        return [
-            'imported'   => $imported,
-            'skipped'    => $skipped,
-            'total_rows' => $totalRows,
-        ];
     }
 
     /**

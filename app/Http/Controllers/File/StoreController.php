@@ -33,7 +33,6 @@ class StoreController extends Controller
         $storePlaylist = ($this->storePlaylist)($uploadedFile->getClientOriginalName(), $fileAction['hash'], 'playlist');
         $csvAction($fileAction, $storePlaylist);
 
-
         return to_route('files.add')
             ->with('status', $fileAction['status'])
             ->with('status_id',  $fileAction['status_id'] ?? null);

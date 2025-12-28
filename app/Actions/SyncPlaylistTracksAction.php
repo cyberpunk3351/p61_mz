@@ -13,10 +13,8 @@ class SyncPlaylistTracksAction
     {
         try {
             $playlist->tracks()->save($track);
-            dump(true);
             return true;
         } catch (Exception $e) {
-            dump(false);
             // Log error if needed
             return false;
         }

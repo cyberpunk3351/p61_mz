@@ -72,8 +72,6 @@ const showToast = () => {
                     class="space-y-6"
                     v-slot="{ errors, processing, recentlySuccessful }"
                 >
-                    <Toaster v-show="recentlySuccessful" />
-
                     <div class="space-y-2">
                         <Label for="file">File</Label>
                         <Input
@@ -116,6 +114,7 @@ const showToast = () => {
                             </p>
                         </Transition>
                     </div>
+                    <Toaster v-show="recentlySuccessful" />
                 </Form>
             </div>
         </MzLayout>

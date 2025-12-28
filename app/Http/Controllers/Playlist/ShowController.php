@@ -18,15 +18,29 @@ class ShowController
         $defaultPerPage = 10;
         $maxPerPage = 50;
 
-//        dd($request->all());
-
         $perPage = $request->input('limit', $defaultPerPage);
-        $playlist->loadMissing(['tracks.artists']);
 
-        $tracks = $playlist
+        // Определяем, нужна ли сортировка по rating
+        $sortByRating = $request->has('sort_by') && $request->input('sort_by') === 'rating';
+
+        // Загружаем отношение с сортировкой
+        if ($sortByRating) {
+            $playlist->loadMissing(['tracks' => function ($query) {
+                $query->orderBy('rating', 'desc');
+            }, 'tracks.artists']);
+        } else {
+            $playlist->loadMissing(['tracks.artists']);
+        }
+
+        $tracksQuery = $playlist
             ->tracks()
-            ->with('artists')
-            ->paginate($perPage);
+            ->with('artists');
+
+        if ($sortByRating) {
+            $tracksQuery->whereNotNull('rating')->orderBy('rating', 'desc');
+        }
+
+        $tracks = $tracksQuery->paginate($perPage);
 
         return Inertia::render('playlist/ShowPage', [
             'playlist' => [

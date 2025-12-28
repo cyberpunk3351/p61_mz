@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { show as showArtist } from '@/routes/artists';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
@@ -41,6 +42,7 @@ import {
 } from '@/components/ui/pagination';
 import { Toaster } from '@/components/ui/sonner';
 import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 
 type Album = {
     id: number;
@@ -97,7 +99,31 @@ const loadedTracks = ref<Track[]>([...props.tracks.data]);
 
 const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
 
+const sortByRating = ref();
+
+function handlePageRatingChange() {
+    router.get(
+        show.url(props.playlist.data.id, {
+            query: {
+                page: 1,
+                limit: 30,
+            },
+        }),
+        {
+            sort_by: 'rating',
+            sort_direction: 'desc',
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        },
+    );
+}
+
 function handlePageChange(newPage: number) {
+    console.log('Sort by rating:', sortByRating.value);
+
     router.get(
         show.url(props.playlist.data.id, {
             query: {
@@ -132,7 +158,6 @@ const searchSaves = async (id: number, query: string, limit: number) => {
     }
 
     try {
-        console.log('search');
         router.get(
             search.url(props.playlist.data.id, {}),
             { query: query },
@@ -148,6 +173,7 @@ const searchSaves = async (id: number, query: string, limit: number) => {
 };
 
 function handleClick() {
+    searchQuery.value = '';
     handlePageChange(1);
     searchQuery.value = '';
 }
@@ -239,7 +265,7 @@ const fallbackCopy = (text: string) => {
                 </div>
             </div>
 
-            <div>
+            <div class="flex">
                 <div class="relative flex w-full max-w-sm items-center">
                     <Input
                         v-model="searchQuery"
@@ -260,6 +286,16 @@ const fallbackCopy = (text: string) => {
                             @click="handleClick"
                         />
                     </div>
+                </div>
+            </div>
+            <div>
+                <div class="flex items-center gap-3">
+                    <Checkbox
+                        id="rating"
+                        v-model="sortByRating"
+                        @update:modelValue="handlePageRatingChange"
+                    />
+                    <Label for="rating">Rating</Label>
                 </div>
             </div>
 
