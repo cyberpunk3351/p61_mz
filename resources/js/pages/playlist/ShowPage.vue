@@ -176,6 +176,7 @@ function handleClick() {
     searchQuery.value = '';
     handlePageChange(1);
     searchQuery.value = '';
+    sortByRating.value = false;
 }
 const copyToClipboard = (track: Track) => {
     const artist = track.artists.map((a) => a.name).join(', ');
@@ -292,8 +293,8 @@ const fallbackCopy = (text: string) => {
                 <div class="flex items-center gap-3">
                     <Checkbox
                         id="rating"
-                        v-model="sortByRating"
                         @update:modelValue="handlePageRatingChange"
+                        v-model="sortByRating"
                     />
                     <Label for="rating">Rating</Label>
                 </div>
