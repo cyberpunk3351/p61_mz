@@ -95,9 +95,9 @@ const props = defineProps<{
     tracks: TracksPagination;
 }>();
 
-const loadedTracks = ref<Track[]>([...props.tracks.data]);
+// const loadedTracks = ref<Track[]>([...props.tracks.data]);
 
-const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
+// const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
 
 const sortByRating = ref();
 
