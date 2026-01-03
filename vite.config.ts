@@ -31,6 +31,7 @@ export default defineConfig(({ mode }) => {
         ],
         server: {
             host: '0.0.0.0',
+            port: parseInt(env.VITE_PORT) || 5183,
             cors: {
                 origin: devOrigin,
                 credentials: true,
@@ -44,6 +45,7 @@ export default defineConfig(({ mode }) => {
             },
             hmr: {
                 host: devHost,
+                port: parseInt(env.VITE_PORT) || 5183,
             },
         },
     };

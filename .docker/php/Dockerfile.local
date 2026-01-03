@@ -8,19 +8,30 @@ USER root
 # Сервим на 80 (без TLS)
 ENV SERVER_NAME="http://"
 
-# Базовые пакеты и PHP-расширения
+# Базовые пакеты
 RUN set -eux; \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-      ca-certificates curl gnupg nano locales apt-transport-https supervisor \
+      ca-certificates curl gnupg nano locales apt-transport-https \
       libpq-dev libfreetype6-dev libjpeg62-turbo-dev zlib1g-dev libzip-dev \
       libtidy-dev libonig-dev libicu-dev g++ wget rsync git zip unzip \
       libpng-dev libxrender1 libfontconfig1 fontconfig libfontconfig1-dev && \
-    docker-php-ext-configure gd --with-freetype --with-jpeg && \
-    docker-php-ext-configure intl && \
-    docker-php-ext-install -j"$(nproc)" gd pdo_mysql pdo_pgsql pgsql zip exif pcntl bcmath mbstring opcache sockets && \
-    docker-php-source delete && \
     rm -rf /var/lib/apt/lists/*
+
+# Устанавливаем PHP-расширения через install-php-extensions
+RUN install-php-extensions \
+    gd \
+    pdo_mysql \
+    pdo_pgsql \
+    pgsql \
+    zip \
+    exif \
+    pcntl \
+    bcmath \
+    mbstring \
+    opcache \
+    sockets \
+    intl
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
@@ -55,20 +66,19 @@ WORKDIR /app
 # Служебные каталоги для Caddy/FrankenPHP (важно для прав)
 RUN mkdir -p /data /config && chown -R ${UID}:${GID} /data /config
 
-# Конфиги PHP и supervisor
+# Конфиги PHP
 COPY ./.docker/php/php.ini /usr/local/etc/php/
-COPY ./.docker/etc/supervisor.d/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Копируем код сразу с нужными правами (не разбрасываем в /)
+# Копируем код с нужными правами
 COPY --chown=${UID}:${GID} . /app
 
-# Устанавливаем зависимости Laravel под тем же пользователем, чтобы vendor/node_modules не были root-owned
+# Устанавливаем зависимости Laravel
 # RUN composer install --no-interaction --no-plugins --no-scripts --prefer-dist
 
 USER www
 
-# Если нужны front-ассеты, раскомментируй:
+# Front-ассеты
 # RUN npm ci && npm run build
 
 EXPOSE 80 443
-# ENTRYPOINT/CMD оставляем дефолтные из образа frankenphp (он поднимет Caddy/FrankenPHP)
+
