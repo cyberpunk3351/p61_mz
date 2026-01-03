@@ -33,15 +33,12 @@ export default defineConfig(({ mode }) => {
             host: '0.0.0.0',
             port: parseInt(env.VITE_PORT) || 5183,
             cors: {
-                origin: devOrigin,
+                origin: true,
                 credentials: true,
             },
             strictPort: true,
             watch: {
                 usePolling: true,
-            },
-            headers: {
-                'Access-Control-Allow-Origin': devOrigin,
             },
             hmr: {
                 host: devHost,
