@@ -26,10 +26,12 @@ class ShowController
         // Загружаем отношение с сортировкой
         if ($sortByRating) {
             $playlist->loadMissing(['tracks' => function ($query) {
-                $query->orderBy('rating', 'desc');
+                $query->orderBy('rating', 'desc')->orderBy('tracks.id', 'asc');
             }, 'tracks.artists']);
         } else {
-            $playlist->loadMissing(['tracks.artists']);
+            $playlist->loadMissing(['tracks' => function ($query) {
+                $query->orderBy('tracks.id', 'asc');
+            }, 'tracks.artists']);
         }
 
         $tracksQuery = $playlist
@@ -40,7 +42,7 @@ class ShowController
             $tracksQuery->whereNotNull('rating')->orderBy('rating', 'desc');
         }
 
-        $tracks = $tracksQuery->paginate($perPage);
+        $tracks = $tracksQuery->orderBy('tracks.id', 'asc')->paginate($perPage);
 
         return Inertia::render('playlist/ShowPage', [
             'playlist' => [
