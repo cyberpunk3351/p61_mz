@@ -5,15 +5,14 @@ import { Label } from '@/components/ui/label';
 import { show as showArtist } from '@/routes/artists';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { get, search, show } from '@/routes/playlists';
-import { show as showGenre } from '@/routes/genres';
+import { show } from '@/routes/genres';
 import { rating } from '@/routes/tracks';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { toast } from 'vue-sonner';
 import 'vue-sonner/style.css';
-import { computed, ref } from 'vue';
-import { Copy, Search, X, Trash2 } from 'lucide-vue-next';
+import { ref } from 'vue';
+import { Copy, Search, X } from 'lucide-vue-next';
 const searchQuery = ref('');
 
 import {
@@ -58,7 +57,7 @@ type Artist = {
 type Genre = {
     id: number;
     name: string;
-    slug: string;
+    slug: string; // Added slug for linking
 };
 
 type AlbumCollection = {
@@ -82,36 +81,31 @@ type TracksPagination = {
     current_page: number;
     next_page_url: string | null;
     per_page: number | null;
+    total: number;
 };
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Playlist',
-        href: get().url,
+        title: 'Genres',
+        href: '#', // TODO: Add index route for genres if needed
     },
 ];
 
 const props = defineProps<{
-    playlist: {
-        data: {
-            id: number;
-            title: string;
-            source: string | null;
-            date: string;
-        };
+    genre: {
+        id: number;
+        name: string;
+        slug: string;
     };
     tracks: TracksPagination;
 }>();
 
-// const loadedTracks = ref<Track[]>([...props.tracks.data]);
-
-// const tracksAreEmpty = computed(() => loadedTracks.value.length === 0);
-
 const sortByRating = ref();
 
 function handlePageRatingChange() {
+    // Basic sorting implementation - can be expanded
     router.get(
-        show.url(props.playlist.data.id, {
+        show.url(props.genre.slug, {
             query: {
                 page: 1,
                 limit: 30,
@@ -130,10 +124,8 @@ function handlePageRatingChange() {
 }
 
 function handlePageChange(newPage: number) {
-    console.log('Sort by rating:', sortByRating.value);
-
     router.get(
-        show.url(props.playlist.data.id, {
+        show.url(props.genre.slug, {
             query: {
                 page: newPage,
                 limit: props.tracks.per_page,
@@ -160,25 +152,8 @@ function saveRating(rat: number, id: number) {
     );
 }
 
-const searchSaves = async (id: number, query: string, limit: number) => {
-    if (!query) {
-        return handlePageChange(1);
-    }
-
-    try {
-        router.get(
-            search.url(props.playlist.data.id, {}),
-            { query: query },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                replace: true,
-            },
-        );
-    } catch (error) {
-        console.error('Error searching saves:', error);
-    }
-};
+// Simplified search for now - can be added later
+// const searchSaves = ...
 
 function handleClick() {
     searchQuery.value = '';
@@ -228,29 +203,16 @@ const fallbackCopy = (text: string) => {
 
     document.body.removeChild(textarea);
 };
-
-function deleteTrack(playlistId: number, trackId: number) {
-    router.delete(`/playlists/${playlistId}/tracks/${trackId}`, {
-        preserveScroll: true,
-        preserveState: true,
-        onSuccess: () => {
-            toast.success('Track removed from playlist');
-        },
-        onError: () => {
-            toast.error('Failed to remove track');
-        },
-    });
-}
 </script>
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <Head :title="props.playlist.data.title" />
+        <Head :title="props.genre.name" />
         <MzLayout>
             <div class="flex flex-col space-y-6">
                 <HeadingSmall
-                    :title="props.playlist.data.title"
-                    description="Track list"
+                    :title="props.genre.name"
+                    description="Genre tracks"
                 />
             </div>
 
@@ -288,39 +250,9 @@ function deleteTrack(playlistId: number, trackId: number) {
             </div>
 
             <div class="flex">
-                <div class="relative flex w-full max-w-sm items-center">
-                    <Input
-                        v-model="searchQuery"
-                        @input="searchSaves(playlist.id, searchQuery, perPage)"
-                        id="search"
-                        type="text"
-                        placeholder="Search..."
-                        class="pl-10"
-                    />
-                    <span
-                        class="absolute inset-y-0 start-0 flex items-center justify-center px-2"
-                    >
-                        <Search class="size-6 text-muted-foreground" />
-                    </span>
-                    <div class="pl-4">
-                        <X
-                            class="size-6 cursor-pointer text-muted-foreground hover:text-zinc-100"
-                            @click="handleClick"
-                        />
-                    </div>
-                </div>
+               <!-- Search can be added here -->
             </div>
-            <div>
-                <div class="flex items-center gap-3">
-                    <Checkbox
-                        id="rating"
-                        @update:modelValue="handlePageRatingChange"
-                        v-model="sortByRating"
-                    />
-                    <Label for="rating">Rating</Label>
-                </div>
-            </div>
-
+            
             <Table>
                 <TableHeader>
                     <TableRow>
@@ -393,7 +325,7 @@ function deleteTrack(playlistId: number, trackId: number) {
                                 <Link
                                     v-for="genre in item.genres"
                                     :key="genre.id"
-                                    :href="showGenre.url(genre.slug)"
+                                    :href="show.url(genre.slug)"
                                     class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset transition hover:bg-zinc-700"
                                     :class="[
                                         genre.id === item.primary_genre_id
@@ -486,20 +418,6 @@ function deleteTrack(playlistId: number, trackId: number) {
                                                         d="M35.937,18.041c0.046-0.151,0.068-0.291,0.062-0.416C35.984,17.263,35.735,17,35.149,17h-2.618 c-0.661,0-0.966,0.4-1.144,0.801c0,0-1.632,3.359-3.513,5.574c-0.61,0.641-0.92,0.625-1.25,0.625C26.447,24,26,23.786,26,23.199 v-5.185C26,17.32,25.827,17,25.268,17h-4.649C20.212,17,20,17.32,20,17.641c0,0.667,0.898,0.827,1,2.696v3.623 C21,24.84,20.847,25,20.517,25c-0.89,0-2.642-3-3.815-6.932C16.448,17.294,16.194,17,15.533,17h-2.643 C12.127,17,12,17.374,12,17.774c0,0.721,0.6,4.619,3.875,9.101C18.25,30.125,21.379,32,24.149,32c1.678,0,1.85-0.427,1.85-1.094 v-2.972C26,27.133,26.183,27,26.717,27c0.381,0,1.158,0.25,2.658,2c1.73,2.018,2.044,3,3.036,3h2.618 c0.608,0,0.957-0.255,0.971-0.75c0.003-0.126-0.015-0.267-0.056-0.424c-0.194-0.576-1.084-1.984-2.194-3.326 c-0.615-0.743-1.222-1.479-1.501-1.879C32.062,25.36,31.991,25.176,32,25c0.009-0.185,0.105-0.361,0.249-0.607 C32.223,24.393,35.607,19.642,35.937,18.041z"
                                                     ></path></svg
                                             ></DropdownMenuShortcut>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            @click="
-                                                deleteTrack(
-                                                    props.playlist.data.id,
-                                                    item.id,
-                                                )
-                                            "
-                                            class="cursor-pointer text-red-600 focus:text-red-600"
-                                        >
-                                            Delete
-                                            <DropdownMenuShortcut>
-                                                <Trash2 class="size-4" />
-                                            </DropdownMenuShortcut>
                                         </DropdownMenuItem>
                                     </DropdownMenuGroup>
                                 </DropdownMenuContent>

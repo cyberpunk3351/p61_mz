@@ -14,3 +14,4 @@ require __DIR__.'/files.php';
 require __DIR__.'/playlist.php';
 require __DIR__.'/tracks.php';
 require __DIR__.'/artists.php';
+require __DIR__.'/genres.php';

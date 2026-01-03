@@ -13,6 +13,8 @@ readonly class CsvAction
         private StoreArtistAction $storeArtistFromRow,
         private StoreTrackAction $storeTrackFromRow,
         private StoreAlbumAction $storeAlbum,
+        private StoreGenresAction $storeGenres,
+        private SyncTrackGenresAction $syncTrackGenres,
         private SyncPlaylistTracksAction $syncPlaylistTracks,
         private SyncArtistsTracksAction $syncArtistsTracks,
         private SyncAlbumTracksAction $syncAlbumTracks,
@@ -62,12 +64,19 @@ readonly class CsvAction
 
             $row = $this->mapRow($headerKeys, $data);
 
+            $genreData = ($this->storeGenres)($row);
+            $row = array_merge($row, $genreData);
+
             $artists = ($this->storeArtistFromRow)($row);
             $track = ($this->storeTrackFromRow)($row);
             $album = ($this->storeAlbum)($row);
 
             if ($track === null) {
                 continue;
+            }
+
+            if (($genreData['all_genre_ids'] ?? []) !== []) {
+                ($this->syncTrackGenres)($track, $genreData['all_genre_ids']);
             }
 
             $artistModels = $artists['artists'] ?? [];

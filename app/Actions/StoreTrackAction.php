@@ -32,6 +32,8 @@ readonly class StoreTrackAction
                 'release_date' => $releaseDate ?? null,
                 'spotify_id' => $trackId ?? null,
                 'isrc' => $isrc ?? null,
+                'genre_id' => $row['genre_id'] ?? null,
+                'parent_genre_id' => $row['parent_genre_id'] ?? null,
             ]
         );
     }

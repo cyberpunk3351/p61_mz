@@ -15,9 +15,10 @@ import { dashboard } from '@/routes';
 import { add } from '@/routes/files';
 import { get as playlistsGet } from '@/routes/playlists';
 import { get as artistsGet } from '@/routes/artists';
+import { get as genresGet } from '@/routes/genres';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
-import { Folder, LayoutGrid, Plus, ListOrdered, User } from 'lucide-vue-next';
+import { Folder, LayoutGrid, Plus, ListOrdered, User, Music } from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const mainNavItems: NavItem[] = [
@@ -40,6 +41,11 @@ const mainNavItems: NavItem[] = [
         title: 'Artists',
         href: artistsGet(),
         icon: User,
+    },
+    {
+        title: 'Genres',
+        href: genresGet.url(),
+        icon: Music,
     },
 ];
 

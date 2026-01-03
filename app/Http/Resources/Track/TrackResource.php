@@ -38,7 +38,17 @@ class TrackResource extends JsonResource
             'rating' => $track->rating,
             'title' => $track->title,
             'albums' => AlbumResource::collection($this->whenLoaded('albums')),
-            'genres' => $track->genre,
+            'genres' => $track->genres
+                ->map(static function ($genre): array {
+                    return [
+                        'id' => $genre->id,
+                        'name' => $genre->name,
+                        'slug' => $genre->slug,
+                    ];
+                })
+                ->values()
+                ->toArray(),
+            'primary_genre_id' => $track->genre_id,
         ];
     }
 }

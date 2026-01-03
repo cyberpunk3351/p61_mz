@@ -27,16 +27,16 @@ class ShowController
         if ($sortByRating) {
             $playlist->loadMissing(['tracks' => function ($query) {
                 $query->orderBy('rating', 'desc')->orderBy('tracks.id', 'asc');
-            }, 'tracks.artists']);
+            }, 'tracks.artists', 'tracks.genres']);
         } else {
             $playlist->loadMissing(['tracks' => function ($query) {
                 $query->orderBy('tracks.id', 'asc');
-            }, 'tracks.artists']);
+            }, 'tracks.artists', 'tracks.genres']);
         }
 
         $tracksQuery = $playlist
             ->tracks()
-            ->with('artists');
+            ->with(['artists', 'genres']);
 
         if ($sortByRating) {
             $tracksQuery->whereNotNull('rating')->orderBy('rating', 'desc');

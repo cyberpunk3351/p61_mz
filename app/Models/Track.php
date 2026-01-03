@@ -33,6 +33,8 @@ class Track extends Model
         'spotify_track_id',
         'isrc',
         'spotify_id',
+        'genre_id',
+        'parent_genre_id',
     ];
 
     protected function casts(): array
@@ -63,6 +65,11 @@ class Track extends Model
     public function albums(): BelongsToMany
     {
         return $this->belongsToMany(Album::class, 'album_track', 'track_id', 'album_id');
+    }
+
+    public function genres(): BelongsToMany
+    {
+        return $this->belongsToMany(Genre::class, 'genre_track', 'track_id', 'genre_id');
     }
 
     /**
