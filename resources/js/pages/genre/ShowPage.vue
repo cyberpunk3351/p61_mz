@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { show as showArtist } from '@/routes/artists';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { show } from '@/routes/genreRoutes';
+import { show } from '@/routes/genreRoutes.ts';
 import { rating } from '@/routes/tracks';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
