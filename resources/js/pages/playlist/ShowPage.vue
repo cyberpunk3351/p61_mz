@@ -6,7 +6,7 @@ import { show as showArtist } from '@/routes/artists';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
 import { get, search, show } from '@/routes/playlists';
-import { show as showGenre } from '@/routes/genres';
+import { show as showGenre } from '@/routes/genreRoutes';
 import { rating } from '@/routes/tracks';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
