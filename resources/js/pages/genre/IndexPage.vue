@@ -2,7 +2,7 @@
 import HeadingSmall from '@/components/HeadingSmall.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { get, show } from '@/routes/genreRoutes.ts';
+import genreRoutes from '@/routes/genres';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { ref, watch } from 'vue';
@@ -38,10 +38,12 @@ const props = defineProps<{
     };
 }>();
 
+console.log('Genres prop:', props.genres);
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Genres',
-        href: get.url(),
+        href: genreRoutes.index.url(),
     },
 ];
 
@@ -49,7 +51,7 @@ const searchQuery = ref(props.filters.search || '');
 
 const handleSearch = debounce((value: string) => {
     router.get(
-        get.url(),
+        genreRoutes.index.url(),
         { search: value },
         {
             preserveState: true,
@@ -69,7 +71,7 @@ function clearSearch() {
 
 function handlePageChange(page: number) {
     router.get(
-        get.url(),
+        genreRoutes.index.url(),
         { page, search: searchQuery.value },
         {
             preserveState: true,
@@ -119,7 +121,7 @@ function handlePageChange(page: number) {
                 <Link
                     v-for="genre in genres.data"
                     :key="genre.id"
-                    :href="show.url(genre.slug)"
+                    :href="genreRoutes.show.url(genre.slug)"
                     class="group flex items-center justify-between p-4 hover:bg-accent/50 transition-all border-b last:border-0 border-border"
                 >
                     <div class="flex items-center space-x-4">
@@ -139,7 +141,7 @@ function handlePageChange(page: number) {
             </div>
 
             <!-- Empty State -->
-            <div v-if="genres.data.length === 0" class="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+            <div v-if="genres.data && genres.data.length === 0" class="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
                 <Music class="mb-4 h-12 w-12 opacity-20" />
                 <p>No genres found matching "{{ searchQuery }}"</p>
             </div>
@@ -155,23 +157,6 @@ function handlePageChange(page: number) {
                     :default-page="props.genres.current_page"
                     @update:page="handlePageChange"
                 >
-                    <PaginationContent>
-                        <PaginationPrevious v-if="genres.prev_page_url" />
-                        <PaginationItem v-else class="opacity-50 pointer-events-none">
-                             <PaginationPrevious />
-                        </PaginationItem>
-
-                        <template v-for="(item, index) in Math.min(5, Math.ceil(genres.total / genres.per_page))" :key="index">
-                             <!-- Simple pagination fallback if slot logic is complex, 
-                                  but using the component's internal slot logic is better usually.
-                                  Here we rely on the component to yield 'items' 
-                             -->
-                        </template>
-                        <!-- Re-implementing correctly using the slot prop 'items' from Pagination component if available,
-                             or relying on standard shadcn implementation structure 
-                        -->
-                         
-                    </PaginationContent>
                     <!-- Correct Shadcn Pagination usage -->
                      <PaginationContent v-slot="{ items }">
                         <PaginationPrevious />

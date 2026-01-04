@@ -5,7 +5,7 @@ import { Label } from '@/components/ui/label';
 import { show as showArtist } from '@/routes/artists';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
-import { show } from '@/routes/genreRoutes.ts';
+import genres from '@/routes/genres';
 import { rating } from '@/routes/tracks';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -87,7 +87,7 @@ type TracksPagination = {
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: 'Genres',
-        href: '#', // TODO: Add index route for genres if needed
+        href: genres.index.url(),
     },
 ];
 
@@ -105,7 +105,7 @@ const sortByRating = ref();
 function handlePageRatingChange() {
     // Basic sorting implementation - can be expanded
     router.get(
-        show.url(props.genre.slug, {
+        genres.show.url(props.genre.slug, {
             query: {
                 page: 1,
                 limit: 30,
@@ -125,7 +125,7 @@ function handlePageRatingChange() {
 
 function handlePageChange(newPage: number) {
     router.get(
-        show.url(props.genre.slug, {
+        genres.show.url(props.genre.slug, {
             query: {
                 page: newPage,
                 limit: props.tracks.per_page,
@@ -325,7 +325,7 @@ const fallbackCopy = (text: string) => {
                                 <Link
                                     v-for="genre in item.genres"
                                     :key="genre.id"
-                                    :href="show.url(genre.slug)"
+                                    :href="genres.show.url(genre.slug)"
                                     class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset transition hover:bg-zinc-700"
                                     :class="[
                                         genre.id === item.primary_genre_id

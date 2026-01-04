@@ -15,7 +15,7 @@ import { dashboard } from '@/routes';
 import { add } from '@/routes/files';
 import { get as playlistsGet } from '@/routes/playlists';
 import { get as artistsGet } from '@/routes/artists';
-import { get as genresGet } from '@/routes/genreRoutes.ts';
+import genres from '@/routes/genres';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/vue3';
 import { Folder, LayoutGrid, Plus, ListOrdered, User, Music } from 'lucide-vue-next';
@@ -44,7 +44,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Genres',
-        href: genresGet.url(),
+        href: genres.index.url(),
         icon: Music,
     },
 ];

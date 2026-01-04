@@ -6,7 +6,7 @@ import { show as showArtist } from '@/routes/artists';
 import AppLayout from '@/layouts/AppLayout.vue';
 import MzLayout from '@/layouts/mz/Layout.vue';
 import { get, search, show } from '@/routes/playlists';
-import { show as showGenre } from '@/routes/genreRoutes.ts';
+import genres from '@/routes/genres';
 import { rating } from '@/routes/tracks';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
@@ -393,7 +393,7 @@ function deleteTrack(playlistId: number, trackId: number) {
                                 <Link
                                     v-for="genre in item.genres"
                                     :key="genre.id"
-                                    :href="showGenre.url(genre.slug)"
+                                    :href="genres.show.url(genre.slug)"
                                     class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset transition hover:bg-zinc-700"
                                     :class="[
                                         genre.id === item.primary_genre_id
