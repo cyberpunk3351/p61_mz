@@ -9,6 +9,9 @@ Route::get('dashboard', function () {
     return Inertia::render('Dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');
 
+// Post routes
+Route::resource('posts', \App\Http\Controllers\PostController::class)->middleware(['auth']);
+
 require __DIR__.'/settings.php';
 require __DIR__.'/files.php';
 require __DIR__.'/playlist.php';
